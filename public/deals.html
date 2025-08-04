@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<body>
+  <h1>ArielMatrix Deals</h1>
+  <div id="opportunities"></div>
+  <script>
+    fetch('/api/cosmoweb3db', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'find', collection: 'opportunities', query: {} })
+    })
+    .then(res => res.json())
+    .then(data => {
+      const div = document.getElementById('opportunities');
+      data.results.forEach(opp => {
+        div.innerHTML += `<p>${opp.product_name} (${opp.country}): <a href="${opp.affiliate_link}" target="_blank">Buy Now</a></p>`;
+      });
+    });
+  </script>
+</body>
+</html>
