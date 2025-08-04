@@ -7,7 +7,8 @@
     },
     {
       "src": "api/cosmoweb3db.py",
-      "use": "@vercel/python"
+      "use": "@vercel/python",
+      "config": { "runtime": "python3.12" }
     },
     {
       "src": "public/**",
@@ -27,6 +28,5 @@
   "env": {
     "VITE_BSC_PRIVATE_KEY": ""
   },
-  "buildCommand": "npm run build && pip install -r requirements.txt",
   "outputDirectory": "dist"
 }
