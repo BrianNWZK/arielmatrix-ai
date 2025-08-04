@@ -2,53 +2,18 @@
   "version": 2,
   "builds": [
     {
-      "src": "package.json",
-      "use": "@vercel/node",
-      "config": {
-        "distDir": "dist",
-        "includeFiles": ["public/**"]
-      }
-    },
-    {
       "src": "api/cosmoweb3db.py",
       "use": "@vercel/python",
       "config": {
-        "runtime": "python3.12",
-        "maxLambdaSize": "15mb",
-        "includeFiles": ["requirements.txt"]
+        "runtime": "python3.11",  // Downgrade to 3.11 for better compatibility
+        "installCommand": "apt-get update && apt-get install -y libsodium-dev && pip install --upgrade pip setuptools wheel && pip install -r requirements.txt"
       }
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "/api/cosmoweb3db.py",
-      "methods": ["GET", "POST", "OPTIONS"]
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/dist/$1",
-      "headers": {
-        "Cache-Control": "public, max-age=3600"
-      }
-    },
-    {
-      "src": "/static/(.*)",
-      "dest": "/public/$1",
-      "headers": {
-        "Cache-Control": "public, max-age=31536000, immutable"
-      }
+      "dest": "/api/cosmoweb3db.py"
     }
-  ],
-  "env": {
-    "VITE_BSC_PRIVATE_KEY": "",
-    "PYTHONPATH": "/var/task:/var/task/api"
-  },
-  "build": {
-    "env": {
-      "NODE_ENV": "production",
-      "PYTHONUNBUFFERED": "1"
-    }
-  },
-  "buildCommand": "apt-get update && apt-get install -y libsodium-dev cmake && pip cache purge && pip install --upgrade pip && pip install -r requirements.txt && npm install && npm run build"
+  ]
 }
