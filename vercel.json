@@ -5,8 +5,8 @@
       "src": "api/cosmoweb3db.py",
       "use": "@vercel/python",
       "config": {
-        "runtime": "python3.11",  // Downgrade to 3.11 for better compatibility
-        "installCommand": "apt-get update && apt-get install -y libsodium-dev && pip install --upgrade pip setuptools wheel && pip install -r requirements.txt"
+        "runtime": "python3.11",
+        "installCommand": "apt-get update && apt-get install -y libsodium-dev cmake build-essential && pip install --upgrade pip && pip install -r requirements.txt"
       }
     }
   ],
