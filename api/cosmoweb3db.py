@@ -11,7 +11,7 @@ import asyncio
 import numpy as np
 from datetime import datetime
 import countries
-import js_ipfs
+import ipfshttpclient
 
 app = FastAPI()
 
@@ -28,14 +28,14 @@ class CosmoWeb3DB:
         self.stats = {"read_latency": 0, "write_latency": 0, "ipfs_peers": 0}
         os.makedirs(self.data_dir, exist_ok=True)
         self.error_log = []
+        self.ipfs_client = None
 
     async def initialize_ipfs_nodes(self):
         try:
-            for _ in range(3):  # Spin up 3 nodes for redundancy
-                node = js_ipfs.create()
-                await node.start()
-                peer_id = await node.id()
-                self.ipfs_nodes.append({"id": peer_id, "node": node})
+            # Connect to a public IPFS node or local daemon
+            self.ipfs_client = ipfshttpclient.connect('/ip4/127.0.0.1/tcp/5001')  # Adjust to public gateway if needed
+            peer_info = self.ipfs_client.id()
+            self.ipfs_nodes.append({"id": peer_info['ID'], "node": self.ipfs_client})
             self.stats["ipfs_peers"] = len(self.ipfs_nodes)
             print(f"Initialized {self.stats['ipfs_peers']} IPFS nodes")
         except Exception as e:
@@ -44,13 +44,13 @@ class CosmoWeb3DB:
     async def rotate_ipfs_nodes(self):
         try:
             for node in self.ipfs_nodes:
-                if not await node["node"].is_online():
-                    await node["node"].stop()
-                    new_node = js_ipfs.create()
-                    await new_node.start()
-                    new_peer_id = await new_node.id()
+                try:
+                    node["node"].id()  # Check if node is online
+                except:
                     self.ipfs_nodes.remove(node)
-                    self.ipfs_nodes.append({"id": new_peer_id, "node": new_node})
+                    new_client = ipfshttpclient.connect('/ip4/127.0.0.1/tcp/5001')  # Adjust to public gateway if needed
+                    new_peer_id = new_client.id()['ID']
+                    self.ipfs_nodes.append({"id": new_peer_id, "node": new_client})
             self.stats["ipfs_peers"] = len(self.ipfs_nodes)
             print("Rotated IPFS nodes")
         except Exception as e:
@@ -116,7 +116,7 @@ class CosmoWeb3DB:
         for node in self.ipfs_nodes:
             try:
                 data = {col: self.memory_db[col] for col in self.memory_db}
-                cid = await node["node"].add(json.dumps(data).encode())
+                cid = node["node"].add_bytes(json.dumps(data).encode())
                 self.stats["ipfs_peers"] = len(self.ipfs_nodes)
                 print(f"IPFS backup successful: {cid}")
                 break
