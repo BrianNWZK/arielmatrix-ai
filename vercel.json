@@ -3,31 +3,52 @@
   "builds": [
     {
       "src": "package.json",
-      "use": "@vercel/node"
+      "use": "@vercel/node",
+      "config": {
+        "distDir": "dist",
+        "includeFiles": ["public/**"]
+      }
     },
     {
       "src": "api/cosmoweb3db.py",
       "use": "@vercel/python",
-      "config": { "runtime": "python3.12" }
-    },
-    {
-      "src": "public/**",
-      "use": "@vercel/static"
+      "config": {
+        "runtime": "python3.12",
+        "maxLambdaSize": "15mb",
+        "includeFiles": ["requirements.txt"]
+      }
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "/api/cosmoweb3db.py"
+      "dest": "/api/cosmoweb3db.py",
+      "methods": ["GET", "POST", "OPTIONS"]
     },
     {
       "src": "/(.*)",
-      "dest": "/"
+      "dest": "/dist/$1",
+      "headers": {
+        "Cache-Control": "public, max-age=3600"
+      }
+    },
+    {
+      "src": "/static/(.*)",
+      "dest": "/public/$1",
+      "headers": {
+        "Cache-Control": "public, max-age=31536000, immutable"
+      }
     }
   ],
   "env": {
-    "VITE_BSC_PRIVATE_KEY": ""
+    "VITE_BSC_PRIVATE_KEY": "",
+    "PYTHONPATH": "/var/task:/var/task/api"
   },
-  "buildCommand": "apt-get update && apt-get install -y libsodium-dev && pip cache purge && pip install -r requirements.txt && npm run build",
-  "outputDirectory": "dist"
+  "build": {
+    "env": {
+      "NODE_ENV": "production",
+      "PYTHONUNBUFFERED": "1"
+    }
+  },
+  "buildCommand": "apt-get update && apt-get install -y libsodium-dev cmake && pip cache purge && pip install --upgrade pip && pip install -r requirements.txt && npm install && npm run build"
 }
