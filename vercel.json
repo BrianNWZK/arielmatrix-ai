@@ -10,9 +10,6 @@
     { "src": "/deals.html", "dest": "/deals.html" },
     { "src": "/(.*)", "dest": "/index.html" }
   ],
-  "env": {
-    "VITE_BSC_PRIVATE_KEY": ""
-  },
   "buildCommand": "npm install && npm run build",
   "outputDirectory": "dist",
   "cleanUrls": true,
