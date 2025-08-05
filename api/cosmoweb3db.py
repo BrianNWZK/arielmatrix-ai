@@ -29,18 +29,25 @@ class CosmoWeb3DB:
         os.makedirs(self.data_dir, exist_ok=True)
         self.error_log = []
         self.ipfs_client = None
+        self.ipfs_retries = 3
+        self.ipfs_retry_delay = 5
 
     async def initialize_ipfs_nodes(self):
-        try:
-            self.ipfs_client = ipfshttpclient.connect('/dns/ipfs.io/tcp/5001/http', timeout=10)
-            peer_info = self.ipfs_client.id()
-            self.ipfs_nodes.append({"id": peer_info['ID'], "node": self.ipfs_client})
-            self.stats["ipfs_peers"] = len(self.ipfs_nodes)
-            print(f"Initialized {self.stats['ipfs_peers']} IPFS nodes")
-        except Exception as e:
-            await self._log_error("initialize_ipfs_nodes", f"IPFS connection failed: {str(e)}")
-            self.ipfs_client = None
-            self.stats["ipfs_peers"] = 0
+        for attempt in range(self.ipfs_retries):
+            try:
+                self.ipfs_client = ipfshttpclient.connect('/dns/ipfs.io/tcp/5001/http', timeout=10)
+                peer_info = self.ipfs_client.id()
+                self.ipfs_nodes.append({"id": peer_info['ID'], "node": self.ipfs_client})
+                self.stats["ipfs_peers"] = len(self.ipfs_nodes)
+                print(f"Initialized {self.stats['ipfs_peers']} IPFS nodes")
+                return
+            except Exception as e:
+                await self._log_error("initialize_ipfs_nodes", f"IPFS connection failed (attempt {attempt + 1}/{self.ipfs_retries}): {str(e)}")
+                if attempt < self.ipfs_retries - 1:
+                    await asyncio.sleep(self.ipfs_retry_delay)
+        self.ipfs_client = None
+        self.stats["ipfs_peers"] = 0
+        await self._log_error("initialize_ipfs_nodes", "All IPFS connection attempts failed")
 
     async def rotate_ipfs_nodes(self):
         try:
@@ -49,12 +56,16 @@ class CosmoWeb3DB:
                     node["node"].id()
                 except:
                     self.ipfs_nodes.remove(node)
-                    try:
-                        new_client = ipfshttpclient.connect('/dns/ipfs.io/tcp/5001/http', timeout=10)
-                        new_peer_id = new_client.id()['ID']
-                        self.ipfs_nodes.append({"id": new_peer_id, "node": new_client})
-                    except Exception as e:
-                        await self._log_error("rotate_ipfs_nodes", f"IPFS reconnection failed: {str(e)}")
+                    for attempt in range(self.ipfs_retries):
+                        try:
+                            new_client = ipfshttpclient.connect('/dns/ipfs.io/tcp/5001/http', timeout=10)
+                            new_peer_id = new_client.id()['ID']
+                            self.ipfs_nodes.append({"id": new_peer_id, "node": new_client})
+                            break
+                        except Exception as e:
+                            await self._log_error("rotate_ipfs_nodes", f"IPFS reconnection failed (attempt {attempt + 1}/{self.ipfs_retries}): {str(e)}")
+                            if attempt < self.ipfs_retries - 1:
+                                await asyncio.sleep(self.ipfs_retry_delay)
             self.stats["ipfs_peers"] = len(self.ipfs_nodes)
             print(f"Rotated IPFS nodes, {self.stats['ipfs_peers']} active")
         except Exception as e:
@@ -162,7 +173,7 @@ class CosmoWeb3DB:
 
     async def _self_heal(self, method, error):
         if "network" in error.lower() or "connection" in error.lower():
-            await asyncio.sleep(5)
+            await asyncio.sleep(self.ipfs_retry_delay)
         elif "captcha" in error.lower():
             self.rl_model["learning_rate"] *= 1.1
         elif "ipfs" in error.lower():
@@ -190,7 +201,7 @@ async def handle_db(request: DBRequest):
         await db.insert(request.collection, request.data)
         return {"status": "inserted"}
     elif request.action == "find":
-        results = await db.find(request.collection, request.query)
+        results = await db.find(request.collection, query=request.query)
         return {"results": results}
     elif request.action == "generate_text":
         text = await db.generate_text(request.input)
