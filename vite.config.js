@@ -3,16 +3,16 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  base: './', // ✅ Use relative paths for Vercel to serve correctly
+  base: './',
   build: {
-    outDir: 'dist',       // ✅ Vercel expects final build in /dist
-    assetsDir: 'assets',  // ✅ Keep assets organized
-    sourcemap: false,     // ✅ Speeds up build & reduces size
-    emptyOutDir: true     // ✅ Clears old builds to prevent cache issues
+    outDir: 'dist',
+    assetsDir: 'assets',
+    sourcemap: false,
+    emptyOutDir: true
   },
-  publicDir: 'public',     // ✅ Copies static assets (favicon, robots.txt)
+  publicDir: 'public',
   server: {
-    port: 5173,            // ✅ Dev server port (optional)
+    port: 5173,
     open: true
   }
 });
