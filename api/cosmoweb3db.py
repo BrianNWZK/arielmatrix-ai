@@ -14,8 +14,27 @@ import countries
 import ipfshttpclient
 from web3 import Web3
 from web3.middleware import geth_poa_middleware
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import logging
 
 app = FastAPI()
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+class RLModel(nn.Module):
+    def __init__(self):
+        super(RLModel, self).__init__()
+        self.fc1 = nn.Linear(10, 64)
+        self.fc2 = nn.Linear(64, 32)
+        self.fc3 = nn.Linear(32, 1)
+        self.optimizer = optim.Adam(self.parameters(), lr=0.001)
+
+    def forward(self, x):
+        x = torch.relu(self.fc1(x))
+        x = torch.relu(self.fc2(x))
+        return self.fc3(x)
 
 class CosmoWeb3DB:
     def __init__(self):
@@ -26,17 +45,16 @@ class CosmoWeb3DB:
         self.countries = countries.COUNTRIES
         self.ipfs_nodes = []
         self.text_generator = pipeline("text-generation", model="distilgpt2", tokenizer="distilgpt2")
-        self.rl_model = {"weights": np.random.rand(10), "learning_rate": 0.1}
-        self.stats = {"read_latency": 0, "write_latency": 0, "ipfs_peers": 0}
+        self.rl_model = RLModel()
+        self.stats = {"read_latency": 0, "write_latency": 0, "ipfs_peers": 0, "transfer_success": 0}
         os.makedirs(self.data_dir, exist_ok=True)
         self.error_log = []
         self.ipfs_client = None
         self.ipfs_retries = 3
         self.ipfs_retry_delay = 5
-        # Web3 setup for BSC
         self.web3 = Web3(Web3.HTTPProvider("https://bsc-dataseed.binance.org/"))
         self.web3.middleware_onion.inject(geth_poa_middleware, layer=0)
-        self.wallet_address = "0x04eC5979f05B76d334824841B8341AFdD78b2aFC"  # Trust Wallet address
+        self.wallet_address = "0x04eC5979f05B76d334824841B8341AFdD78b2aFC"
         self.private_key = os.getenv("VITE_BSC_PRIVATE_KEY")
         self.trust_wallet_api_key = os.getenv("VITE_TRUST_WALLET_API_KEY")
         self.usdt_contract_address = "0x55d398326f99059ff775485246999027b3197955"
@@ -60,7 +78,12 @@ class CosmoWeb3DB:
             }
         ]
         self.usdt_contract = self.web3.eth.contract(address=self.usdt_contract_address, abi=self.usdt_abi)
-        self.paymaster_endpoint = "https://api.trustwallet.com/flexgas/v1/paymaster"  # Replace with actual endpoint
+        self.paymaster_endpoint = "https://api.trustwallet.com/flexgas/v1/paymaster"
+        self.email_providers = [
+            "https://api.temp-mail.io/v1/email",
+            "https://api.guerrillamail.com/inbox",
+            "https://10minutemail.com/api"
+        ]
 
     async def initialize_ipfs_nodes(self):
         for attempt in range(self.ipfs_retries):
@@ -69,7 +92,7 @@ class CosmoWeb3DB:
                 peer_info = self.ipfs_client.id()
                 self.ipfs_nodes.append({"id": peer_info['ID'], "node": self.ipfs_client})
                 self.stats["ipfs_peers"] = len(self.ipfs_nodes)
-                print(f"Initialized {self.stats['ipfs_peers']} IPFS nodes")
+                logger.info(f"Initialized {self.stats['ipfs_peers']} IPFS nodes")
                 return
             except Exception as e:
                 await self._log_error("initialize_ipfs_nodes", f"IPFS connection failed (attempt {attempt + 1}/{self.ipfs_retries}): {str(e)}")
@@ -97,7 +120,7 @@ class CosmoWeb3DB:
                             if attempt < self.ipfs_retries - 1:
                                 await asyncio.sleep(self.ipfs_retry_delay)
             self.stats["ipfs_peers"] = len(self.ipfs_nodes)
-            print(f"Rotated IPFS nodes, {self.stats['ipfs_peers']} active")
+            logger.info(f"Rotated IPFS nodes, {self.stats['ipfs_peers']} active")
         except Exception as e:
             await self._log_error("rotate_ipfs_nodes", str(e))
 
@@ -170,7 +193,7 @@ class CosmoWeb3DB:
                 data = {col: self.memory_db[col] for col in self.memory_db}
                 cid = node["node"].add_bytes(json.dumps(data).encode())
                 self.stats["ipfs_peers"] = len(self.ipfs_nodes)
-                print(f"IPFS backup successful: {cid}")
+                logger.info(f"IPFS backup successful: {cid}")
                 break
             except Exception as e:
                 await self._log_error("backup_to_ipfs", str(e))
@@ -179,8 +202,13 @@ class CosmoWeb3DB:
     async def _optimize_rl_model(self):
         try:
             reward = sum(len(shard) for col in self.memory_db.values() for shard in col.values())
-            self.rl_model["weights"] += self.rl_model["learning_rate"] * np.random.rand(10) * reward
-            print("RL model optimized")
+            state = torch.tensor([reward, self.stats["read_latency"], self.stats["write_latency"], self.stats["ipfs_peers"], self.stats["transfer_success"]] + [0] * 5, dtype=torch.float32)
+            action = self.rl_model(state).item()
+            self.rl_model.optimizer.zero_grad()
+            loss = -action * reward  # Maximize reward
+            loss.backward()
+            self.rl_model.optimizer.step()
+            logger.info("RL model optimized")
         except Exception as e:
             await self._log_error("optimize_rl_model", str(e))
 
@@ -199,19 +227,29 @@ class CosmoWeb3DB:
             await self.insert("errors", error_entry)
             await self._self_heal(method, error)
         except Exception as e:
-            print(f"Failed to log error: {e}")
+            logger.error(f"Failed to log error: {e}")
 
     async def _self_heal(self, method, error):
         if "network" in error.lower() or "connection" in error.lower():
             await asyncio.sleep(self.ipfs_retry_delay)
         elif "captcha" in error.lower():
-            self.rl_model["learning_rate"] *= 1.1
+            self.rl_model.optimizer.param_groups[0]['lr'] *= 1.1
         elif "ipfs" in error.lower():
             await self.rotate_ipfs_nodes()
-        print(f"Self-healed {method}: {error}")
+        elif "paymaster" in error.lower():
+            await self._switch_paymaster()
+        logger.info(f"Self-healed {method}: {error}")
 
-    async def stats(self):
-        return self.stats
+    async def _switch_paymaster(self):
+        try:
+            alternative_endpoint = "https://backup.trustwallet.com/flexgas/v1/paymaster"
+            async with aiohttp.ClientSession() as session:
+                async with session.get(alternative_endpoint + "/health") as response:
+                    if response.status == 200:
+                        self.paymaster_endpoint = alternative_endpoint
+                        logger.info(f"Switched to alternative Paymaster: {self.paymaster_endpoint}")
+        except Exception as e:
+            await self._log_error("_switch_paymaster", str(e))
 
     async def transfer_usdt_with_flexgas(self, to_address, amount):
         try:
@@ -225,25 +263,22 @@ class CosmoWeb3DB:
                 await self._log_error("transfer_usdt_with_flexgas", "Trust Wallet API key not set")
                 return {"error": "Trust Wallet API key not configured"}
 
-            # Check USDT balance (transfer amount + gas fee estimate)
             usdt_balance = self.usdt_contract.functions.balanceOf(self.wallet_address).call()
-            amount_wei = int(amount * 1e18)  # USDT BEP-20 has 18 decimals
-            gas_estimate_wei = int(0.01 * 1e18)  # Estimated gas fee in USDT (~$0.01)
+            amount_wei = int(amount * 1e18)
+            gas_estimate_wei = int(0.01 * 1e18)
             total_usdt_needed = amount_wei + gas_estimate_wei
             if usdt_balance < total_usdt_needed:
                 await self._log_error("transfer_usdt_with_flexgas", f"Insufficient USDT: {usdt_balance / 1e18} USDT, need {(amount + 0.01)} USDT")
                 return {"error": f"Insufficient USDT: {usdt_balance / 1e18} USDT, need {(amount + 0.01)} USDT"}
 
-            # Build USDT transfer transaction
             nonce = self.web3.eth.get_transaction_count(self.wallet_address)
             tx = self.usdt_contract.functions.transfer(to_address, amount_wei).build_transaction({
                 "from": self.wallet_address,
                 "nonce": nonce,
-                "gas": 65000,  # Typical for USDT BEP-20 transfer
-                "gasPrice": 0  # Gas paid via FlexGas in USDT
+                "gas": 65000,
+                "gasPrice": 0
             })
 
-            # Prepare FlexGas payload for Trust Wallet Paymaster
             async with aiohttp.ClientSession() as session:
                 headers = {"Authorization": f"Bearer {self.trust_wallet_api_key}"}
                 payload = {
@@ -257,6 +292,7 @@ class CosmoWeb3DB:
                     if response.status != 200:
                         error = await response.text()
                         await self._log_error("transfer_usdt_with_flexgas", f"Paymaster error: {error}")
+                        await self._switch_paymaster()
                         return {"error": f"Paymaster error: {error}"}
                     result = await response.json()
                     signed_tx = self.web3.eth.account.sign_transaction(result["transaction"], private_key=self.private_key)
@@ -264,13 +300,14 @@ class CosmoWeb3DB:
                     receipt = self.web3.eth.wait_for_transaction_receipt(tx_hash, timeout=120)
 
             if receipt.status == 1:
+                self.stats["transfer_success"] += 1
                 await self.insert("payouts", {
                     "to_address": to_address,
                     "amount": amount,
                     "gas_token": "USDT",
                     "tx_hash": tx_hash.hex(),
                     "timestamp": datetime.now().isoformat(),
-                    "country": "US"  # Default country for logging
+                    "country": "US"
                 })
                 return {"status": "success", "tx_hash": tx_hash.hex()}
             else:
