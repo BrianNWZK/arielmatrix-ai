@@ -1,17 +1,41 @@
 {
   "version": 2,
   "builds": [
-    { "src": "package.json", "use": "@vercel/static-build" },
-    { "src": "api/cosmoweb3db.py", "use": "@vercel/python", "config": { "runtime": "python3.12" } }
+    {
+      "src": "package.json",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/cosmoweb3db.py",
+      "use": "@vercel/python",
+      "config": { "runtime": "python3.12" }
+    },
+    {
+      "src": "dist/**",
+      "use": "@vercel/static"
+    }
   ],
   "routes": [
-    { "src": "/api/(.*)", "dest": "/api/cosmoweb3db.py" },
-    { "src": "/deals", "dest": "/deals.html" },
-    { "src": "/deals.html", "dest": "/deals.html" },
-    { "src": "/(.*)", "dest": "/index.html" }
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/cosmoweb3db.py"
+    },
+    {
+      "src": "/deals",
+      "dest": "/dist/deals.html"
+    },
+    {
+      "src": "/deals.html",
+      "dest": "/dist/deals.html"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/dist/index.html"
+    }
   ],
-  "buildCommand": "npm install && npm run build",
-  "outputDirectory": "dist",
+  "env": {
+    "VITE_BSC_PRIVATE_KEY": ""
+  },
   "cleanUrls": true,
   "trailingSlash": false
 }
