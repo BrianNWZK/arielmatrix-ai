@@ -14,6 +14,29 @@ export class KeyGenerator {
       viglink: { email: null, password: crypto.randomUUID() },
     };
     this.captchaSolver = null;
+    this.walletAddress = '0x04eC5979f05B76d334824841B8341AFdD78b2aFC';
+    this.usdtContractAddress = '0x55d398326f99059ff775485246999027b3197955';
+    this.trustWalletApiKey = process.env.VITE_TRUST_WALLET_API_KEY;
+    this.paymasterEndpoint = 'https://api.trustwallet.com/flexgas/v1/paymaster'; // Replace with actual endpoint
+    this.usdtAbi = [
+      {
+        constant: false,
+        inputs: [
+          { name: '_to', type: 'address' },
+          { name: '_value', type: 'uint256' },
+        ],
+        name: 'transfer',
+        outputs: [{ name: '', type: 'bool' }],
+        type: 'function',
+      },
+      {
+        constant: true,
+        inputs: [{ name: '_owner', type: 'address' }],
+        name: 'balanceOf',
+        outputs: [{ name: 'balance', type: 'uint256' }],
+        type: 'function',
+      },
+    ];
   }
 
   async initializeCaptchaSolver() {
@@ -139,6 +162,37 @@ export class KeyGenerator {
     }
   }
 
+  async transfer_usdt_with_flexgas(to_address, amount) {
+    try {
+      if (!this.trustWalletApiKey) {
+        await this.handleError('transfer_usdt_with_flexgas', new Error('Trust Wallet API key not set'));
+        return { error: 'Trust Wallet API key not configured' };
+      }
+
+      // Use backend API for FlexGas transaction
+      const response = await axios.post('/api/cosmoweb3db', {
+        action: 'transfer_usdt_with_flexgas',
+        to_address,
+        amount,
+      }, {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 10000,
+      });
+
+      if (response.data.status === 'success') {
+        console.log(`USDT transfer successful: ${response.data.tx_hash}`);
+        return { status: 'success', tx_hash: response.data.tx_hash };
+      } else {
+        await this.handleError('transfer_usdt_with_flexgas', new Error(response.data.error));
+        return { error: response.data.error };
+      }
+    } catch (error) {
+      console.error('USDT transfer with FlexGas error:', error.message);
+      await this.handleError('transfer_usdt_with_flexgas', error);
+      return { error: error.message };
+    }
+  }
+
   async refreshKeys(siteTypes) {
     for (const siteType of siteTypes) {
       let attempts = 0;
@@ -149,12 +203,24 @@ export class KeyGenerator {
             const keys = await this.registerInfolinks();
             if (keys) {
               console.log('Infolinks keys generated:', keys);
+              // Example: Transfer USDT revenue after key generation
+              const revenue = 10; // Example amount in USDT
+              const transferResult = await this.transfer_usdt_with_flexgas('0xRecipientAddress', revenue);
+              if (transferResult.status === 'success') {
+                console.log(`Transferred ${revenue} USDT for Infolinks: ${transferResult.tx_hash}`);
+              }
               break;
             }
           } else if (siteType === 'viglink') {
             const keys = await this.registerVigLink();
             if (keys) {
               console.log('VigLink keys generated:', keys);
+              // Example: Transfer USDT revenue after key generation
+              const revenue = 10; // Example amount in USDT
+              const transferResult = await this.transfer_usdt_with_flexgas('0xRecipientAddress', revenue);
+              if (transferResult.status === 'success') {
+                console.log(`Transferred ${revenue} USDT for VigLink: ${transferResult.tx_hash}`);
+              }
               break;
             }
           }
