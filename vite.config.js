@@ -3,16 +3,23 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  base: './',
+  base: '/', // Match deployment URL
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
-    sourcemap: false,
-    emptyOutDir: true
+    sourcemap: true,
+    rollupOptions: {
+      input: {
+        main: './index.html',
+      },
+      output: {
+        entryFileNames: 'assets/[name].[hash].js',
+        chunkFileNames: 'assets/[name].[hash].js',
+        assetFileNames: 'assets/[name].[hash][extname]',
+      },
+    },
   },
-  publicDir: 'public',
   server: {
-    port: 5173,
-    open: true
-  }
+    historyApiFallback: true, // Support SPA routing in dev
+  },
 });
