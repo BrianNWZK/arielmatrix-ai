@@ -17,12 +17,16 @@
       "dest": "/api/cosmoweb3db.py"
     },
     {
+      "src": "/deals",
+      "dest": "/deals.html"
+    },
+    {
       "src": "/deals.html",
-      "dest": "/dist/deals.html"
+      "dest": "/deals.html"
     },
     {
       "src": "/(.*)",
-      "dest": "/dist/index.html"
+      "dest": "/index.html"
     }
   ],
   "env": {
