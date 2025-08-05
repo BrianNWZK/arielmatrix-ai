@@ -21,7 +21,7 @@ class CosmoWeb3DB:
         self.memory_db = {"opportunities": {}, "campaigns": {}, "payouts": {}, "traffic": {}, "errors": {}}
         self.key = nacl.utils.random(nacl.secret.SecretBox.KEY_SIZE)
         self.box = nacl.secret.SecretBox(self.key)
-        self.countries = countries.COUNTRIES  # Full 195 countries
+        self.countries = countries.COUNTRIES
         self.ipfs_nodes = []
         self.text_generator = pipeline("text-generation", model="distilgpt2", tokenizer="distilgpt2")
         self.rl_model = {"weights": np.random.rand(10), "learning_rate": 0.1}
@@ -32,8 +32,7 @@ class CosmoWeb3DB:
 
     async def initialize_ipfs_nodes(self):
         try:
-            # Connect to a public IPFS node or local daemon
-            self.ipfs_client = ipfshttpclient.connect('/ip4/127.0.0.1/tcp/5001')  # Adjust to public gateway if needed
+            self.ipfs_client = ipfshttpclient.connect('/dns/ipfs.io/tcp/5001/http')
             peer_info = self.ipfs_client.id()
             self.ipfs_nodes.append({"id": peer_info['ID'], "node": self.ipfs_client})
             self.stats["ipfs_peers"] = len(self.ipfs_nodes)
@@ -45,10 +44,10 @@ class CosmoWeb3DB:
         try:
             for node in self.ipfs_nodes:
                 try:
-                    node["node"].id()  # Check if node is online
+                    node["node"].id()
                 except:
                     self.ipfs_nodes.remove(node)
-                    new_client = ipfshttpclient.connect('/ip4/127.0.0.1/tcp/5001')  # Adjust to public gateway if needed
+                    new_client = ipfshttpclient.connect('/dns/ipfs.io/tcp/5001/http')
                     new_peer_id = new_client.id()['ID']
                     self.ipfs_nodes.append({"id": new_peer_id, "node": new_client})
             self.stats["ipfs_peers"] = len(self.ipfs_nodes)
@@ -150,9 +149,9 @@ class CosmoWeb3DB:
 
     async def _self_heal(self, method, error):
         if "network" in error.lower():
-            await asyncio.sleep(5)  # Retry after delay
+            await asyncio.sleep(5)
         elif "captcha" in error.lower():
-            self.rl_model["learning_rate"] *= 1.1  # Increase learning rate
+            self.rl_model["learning_rate"] *= 1.1
         elif "ipfs" in error.lower():
             await self.rotate_ipfs_nodes()
         print(f"Self-healed {method}: {error}")
