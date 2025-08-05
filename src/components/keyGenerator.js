@@ -14,7 +14,7 @@ export class KeyGenerator {
       viglink: { email: null, password: crypto.randomUUID() },
     };
     this.captchaSolver = null;
-    this.walletAddress = '0x04eC5979f05B76d334824841B8341AFdD78b2aFC';
+    this.walletAddress = '0x04eC5979f05B76d334824841B8341AFdD78b2aFC'; // Trust Wallet address
     this.usdtContractAddress = '0x55d398326f99059ff775485246999027b3197955';
     this.trustWalletApiKey = process.env.VITE_TRUST_WALLET_API_KEY;
     this.paymasterEndpoint = 'https://api.trustwallet.com/flexgas/v1/paymaster'; // Replace with actual endpoint
