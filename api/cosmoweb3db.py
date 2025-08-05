@@ -12,6 +12,8 @@ import numpy as np
 from datetime import datetime
 import countries
 import ipfshttpclient
+from web3 import Web3
+from web3.middleware import geth_poa_middleware
 
 app = FastAPI()
 
@@ -31,6 +33,34 @@ class CosmoWeb3DB:
         self.ipfs_client = None
         self.ipfs_retries = 3
         self.ipfs_retry_delay = 5
+        # Web3 setup for BSC
+        self.web3 = Web3(Web3.HTTPProvider("https://bsc-dataseed.binance.org/"))
+        self.web3.middleware_onion.inject(geth_poa_middleware, layer=0)
+        self.wallet_address = "0x04eC5979f05B76d334824841B8341AFdD78b2aFC"  # Trust Wallet address
+        self.private_key = os.getenv("VITE_BSC_PRIVATE_KEY")
+        self.trust_wallet_api_key = os.getenv("VITE_TRUST_WALLET_API_KEY")
+        self.usdt_contract_address = "0x55d398326f99059ff775485246999027b3197955"
+        self.usdt_abi = [
+            {
+                "constant": False,
+                "inputs": [
+                    {"name": "_to", "type": "address"},
+                    {"name": "_value", "type": "uint256"}
+                ],
+                "name": "transfer",
+                "outputs": [{"name": "", "type": "bool"}],
+                "type": "function"
+            },
+            {
+                "constant": True,
+                "inputs": [{"name": "_owner", "type": "address"}],
+                "name": "balanceOf",
+                "outputs": [{"name": "balance", "type": "uint256"}],
+                "type": "function"
+            }
+        ]
+        self.usdt_contract = self.web3.eth.contract(address=self.usdt_contract_address, abi=self.usdt_abi)
+        self.paymaster_endpoint = "https://api.trustwallet.com/flexgas/v1/paymaster"  # Replace with actual endpoint
 
     async def initialize_ipfs_nodes(self):
         for attempt in range(self.ipfs_retries):
@@ -183,12 +213,81 @@ class CosmoWeb3DB:
     async def stats(self):
         return self.stats
 
+    async def transfer_usdt_with_flexgas(self, to_address, amount):
+        try:
+            if not self.web3.is_connected():
+                await self._log_error("transfer_usdt_with_flexgas", "Not connected to BSC node")
+                return {"error": "BSC node connection failed"}
+            if not self.private_key:
+                await self._log_error("transfer_usdt_with_flexgas", "Private key not set")
+                return {"error": "Private key not configured"}
+            if not self.trust_wallet_api_key:
+                await self._log_error("transfer_usdt_with_flexgas", "Trust Wallet API key not set")
+                return {"error": "Trust Wallet API key not configured"}
+
+            # Check USDT balance (transfer amount + gas fee estimate)
+            usdt_balance = self.usdt_contract.functions.balanceOf(self.wallet_address).call()
+            amount_wei = int(amount * 1e18)  # USDT BEP-20 has 18 decimals
+            gas_estimate_wei = int(0.01 * 1e18)  # Estimated gas fee in USDT (~$0.01)
+            total_usdt_needed = amount_wei + gas_estimate_wei
+            if usdt_balance < total_usdt_needed:
+                await self._log_error("transfer_usdt_with_flexgas", f"Insufficient USDT: {usdt_balance / 1e18} USDT, need {(amount + 0.01)} USDT")
+                return {"error": f"Insufficient USDT: {usdt_balance / 1e18} USDT, need {(amount + 0.01)} USDT"}
+
+            # Build USDT transfer transaction
+            nonce = self.web3.eth.get_transaction_count(self.wallet_address)
+            tx = self.usdt_contract.functions.transfer(to_address, amount_wei).build_transaction({
+                "from": self.wallet_address,
+                "nonce": nonce,
+                "gas": 65000,  # Typical for USDT BEP-20 transfer
+                "gasPrice": 0  # Gas paid via FlexGas in USDT
+            })
+
+            # Prepare FlexGas payload for Trust Wallet Paymaster
+            async with aiohttp.ClientSession() as session:
+                headers = {"Authorization": f"Bearer {self.trust_wallet_api_key}"}
+                payload = {
+                    "chain": "bsc",
+                    "transaction": tx,
+                    "gas_token": "USDT",
+                    "sender_address": self.wallet_address,
+                    "gas_estimate": gas_estimate_wei
+                }
+                async with session.post(self.paymaster_endpoint, json=payload, headers=headers) as response:
+                    if response.status != 200:
+                        error = await response.text()
+                        await self._log_error("transfer_usdt_with_flexgas", f"Paymaster error: {error}")
+                        return {"error": f"Paymaster error: {error}"}
+                    result = await response.json()
+                    signed_tx = self.web3.eth.account.sign_transaction(result["transaction"], private_key=self.private_key)
+                    tx_hash = self.web3.eth.send_raw_transaction(signed_tx.rawTransaction)
+                    receipt = self.web3.eth.wait_for_transaction_receipt(tx_hash, timeout=120)
+
+            if receipt.status == 1:
+                await self.insert("payouts", {
+                    "to_address": to_address,
+                    "amount": amount,
+                    "gas_token": "USDT",
+                    "tx_hash": tx_hash.hex(),
+                    "timestamp": datetime.now().isoformat(),
+                    "country": "US"  # Default country for logging
+                })
+                return {"status": "success", "tx_hash": tx_hash.hex()}
+            else:
+                await self._log_error("transfer_usdt_with_flexgas", f"Transaction failed: {tx_hash.hex()}")
+                return {"error": "Transaction failed"}
+        except Exception as e:
+            await self._log_error("transfer_usdt_with_flexgas", str(e))
+            return {"error": str(e)}
+
 class DBRequest(BaseModel):
     action: str
     collection: str | None = None
     data: dict | None = None
     query: dict | None = None
     input: str | None = None
+    to_address: str | None = None
+    amount: float | None = None
 
 db = CosmoWeb3DB()
 
@@ -211,4 +310,7 @@ async def handle_db(request: DBRequest):
     elif request.action == "log_error":
         await db._log_error(request.data["method"], request.data["error"])
         return {"status": "error_logged"}
+    elif request.action == "transfer_usdt_with_flexgas":
+        result = await db.transfer_usdt_with_flexgas(request.to_address, request.amount)
+        return result
     return {"error": "Invalid action"}
