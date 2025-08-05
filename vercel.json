@@ -34,7 +34,8 @@
     }
   ],
   "env": {
-    "VITE_BSC_PRIVATE_KEY": ""
+    "VITE_BSC_PRIVATE_KEY": "",
+    "TRUST_WALLET_API_KEY": ""
   },
   "cleanUrls": true,
   "trailingSlash": false
