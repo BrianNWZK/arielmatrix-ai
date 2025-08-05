@@ -1,8 +1,8 @@
 import axios from 'axios';
-import puppeteer from '@vercel/puppeteer';
+import { chromium } from 'playwright';
 import { pipeline } from '@xenova/transformers';
 import * as tf from '@tensorflow/tfjs';
-import { chromium } from 'playwright';
+import crypto from 'crypto';
 
 export class KeyGenerator {
   constructor() {
@@ -15,32 +15,13 @@ export class KeyGenerator {
     this.credentials = {
       infolinks: { email: null, password: crypto.randomUUID() },
       viglink: { email: null, password: crypto.randomUUID() },
-      adsense: { email: null, password: crypto.randomUUID() }
+      adsense: { email: null, password: crypto.randomUUID() },
+      bscscan: { email: null, password: crypto.randomUUID(), apiKey: null },
+      trustwallet: { email: null, password: crypto.randomUUID(), apiKey: null },
+      groq: { email: null, password: crypto.randomUUID(), apiKey: null }
     };
     this.captchaSolver = null;
     this.walletAddress = '0x04eC5979f05B76d334824841B8341AFdD78b2aFC';
-    this.usdtContractAddress = '0x55d398326f99059ff775485246999027b3197955';
-    this.trustWalletApiKey = process.env.VITE_TRUST_WALLET_API_KEY;
-    this.paymasterEndpoint = 'https://api.trustwallet.com/flexgas/v1/paymaster';
-    this.usdtAbi = [
-      {
-        constant: false,
-        inputs: [
-          { name: '_to', type: 'address' },
-          { name: '_value', type: 'uint256' },
-        ],
-        name: 'transfer',
-        outputs: [{ name: '', type: 'bool' }],
-        type: 'function',
-      },
-      {
-        constant: true,
-        inputs: [{ name: '_owner', type: 'address' }],
-        name: 'balanceOf',
-        outputs: [{ name: 'balance', type: 'uint256' }],
-        type: 'function',
-      },
-    ];
     this.rlModel = tf.sequential();
     this.rlModel.add(tf.layers.dense({ units: 64, activation: 'relu', inputShape: [10] }));
     this.rlModel.add(tf.layers.dense({ units: 32, activation: 'relu' }));
@@ -105,6 +86,120 @@ export class KeyGenerator {
     }
   }
 
+  async registerBscScan() {
+    try {
+      await this.initializeCaptchaSolver();
+      const email = await this.getTempEmail();
+      this.credentials.bscscan.email = email;
+      const browser = await chromium.launch({ headless: true });
+      const page = await browser.newPage();
+      await page.goto('https://bscscan.com/register', { waitUntil: 'networkidle' });
+      await page.type('#Email', email);
+      await page.type('#Password', this.credentials.bscscan.password);
+      await page.type('#ConfirmPassword', this.credentials.bscscan.password);
+      if (await this.solveCaptcha(page)) {
+        await page.click('#ContentPlaceHolder1_btnRegister');
+      }
+      await page.waitForNavigation({ timeout: 30000 });
+      const apiKey = await page.evaluate(() => document.querySelector('#apiKey')?.value || null);
+      await browser.close();
+      if (apiKey) {
+        this.credentials.bscscan.apiKey = apiKey;
+        await this.storeApiKey('bscscan', apiKey);
+        await this.optimizeRLModel(1);
+        return { apiKey };
+      }
+      await this.optimizeRLModel(-1);
+      return null;
+    } catch (error) {
+      console.error('BscScan registration error:', error.message);
+      await this.handleError('registerBscScan', error);
+      await this.optimizeRLModel(-1);
+      return null;
+    }
+  }
+
+  async registerTrustWallet() {
+    try {
+      await this.initializeCaptchaSolver();
+      const email = await this.getTempEmail();
+      this.credentials.trustwallet.email = email;
+      const browser = await chromium.launch({ headless: true });
+      const page = await browser.newPage();
+      await page.goto('https://developer.trustwallet.com/signup', { waitUntil: 'networkidle' });
+      await page.type('#email', email);
+      await page.type('#password', this.credentials.trustwallet.password);
+      if (await this.solveCaptcha(page)) {
+        await page.click('#captcha-submit');
+      }
+      await page.click('#signup-button');
+      await page.waitForNavigation({ timeout: 30000 });
+      const apiKey = await page.evaluate(() => document.querySelector('#api-key')?.value || null);
+      await browser.close();
+      if (apiKey) {
+        this.credentials.trustwallet.apiKey = apiKey;
+        await this.storeApiKey('trustwallet', apiKey);
+        await this.optimizeRLModel(1);
+        return { apiKey };
+      }
+      await this.optimizeRLModel(-1);
+      return null;
+    } catch (error) {
+      console.error('Trust Wallet registration error:', error.message);
+      await this.handleError('registerTrustWallet', error);
+      await this.optimizeRLModel(-1);
+      return null;
+    }
+  }
+
+  async registerGroq() {
+    try {
+      await this.initializeCaptchaSolver();
+      const email = await this.getTempEmail();
+      this.credentials.groq.email = email;
+      const browser = await chromium.launch({ headless: true });
+      const page = await browser.newPage();
+      await page.goto('https://console.groq.com/signup', { waitUntil: 'networkidle' });
+      await page.type('#email', email);
+      await page.type('#password', this.credentials.groq.password);
+      if (await this.solveCaptcha(page)) {
+        await page.click('#captcha-submit');
+      }
+      await page.click('#signup-submit');
+      await page.waitForNavigation({ timeout: 30000 });
+      const apiKey = await page.evaluate(() => document.querySelector('#api-key')?.value || null);
+      await browser.close();
+      if (apiKey) {
+        this.credentials.groq.apiKey = apiKey;
+        await this.storeApiKey('groq', apiKey);
+        await this.optimizeRLModel(1);
+        return { apiKey };
+      }
+      await this.optimizeRLModel(-1);
+      return null;
+    } catch (error) {
+      console.error('Groq registration error:', error.message);
+      await this.handleError('registerGroq', error);
+      await this.optimizeRLModel(-1);
+      return null;
+    }
+  }
+
+  async storeApiKey(service, apiKey) {
+    try {
+      await axios.post('/api/cosmoweb3db', {
+        action: 'insert',
+        collection: 'apikeys',
+        data: { service, apiKey, timestamp: new Date().toISOString() }
+      });
+      process.env[`VITE_${service.toUpperCase()}_API_KEY`] = apiKey;
+      console.log(`Stored ${service} API key: ${apiKey}`);
+    } catch (error) {
+      console.error(`Failed to store ${service} API key:`, error.message);
+      await this.handleError('storeApiKey', error);
+    }
+  }
+
   async registerInfolinks() {
     try {
       await this.initializeCaptchaSolver();
@@ -112,7 +207,7 @@ export class KeyGenerator {
       this.credentials.infolinks.email = email;
       const browser = await chromium.launch({ headless: true });
       const page = await browser.newPage();
-      await page.goto('https://www.infolinks.com/publishers/signup', { waitUntil: 'networkidle2' });
+      await page.goto('https://www.infolinks.com/publishers/signup', { waitUntil: 'networkidle' });
       await page.type('#email', email);
       await page.type('#password', this.credentials.infolinks.password);
       if (await this.solveCaptcha(page)) {
@@ -124,8 +219,7 @@ export class KeyGenerator {
       await browser.close();
       if (publisherId) {
         const apiKey = await this.getInfolinksApiKey(publisherId);
-        process.env.VITE_INFOLINKS_API_KEY = apiKey;
-        process.env.VITE_INFOLINKS_PUBLISHER_ID = publisherId;
+        await this.storeApiKey('infolinks', apiKey);
         await this.optimizeRLModel(1);
         return { apiKey, publisherId };
       }
@@ -166,7 +260,7 @@ export class KeyGenerator {
       this.credentials.viglink.email = email;
       const browser = await chromium.launch({ headless: true });
       const page = await browser.newPage();
-      await page.goto('https://www.viglink.com/signup', { waitUntil: 'networkidle2' });
+      await page.goto('https://www.viglink.com/signup', { waitUntil: 'networkidle' });
       await page.type('#email', email);
       await page.type('#password', this.credentials.viglink.password);
       if (await this.solveCaptcha(page)) {
@@ -177,7 +271,7 @@ export class KeyGenerator {
       const apiKey = await page.evaluate(() => document.querySelector('#api-key')?.value || null);
       await browser.close();
       if (apiKey) {
-        process.env.VITE_VIGLINK_API_KEY = apiKey;
+        await this.storeApiKey('viglink', apiKey);
         await this.optimizeRLModel(1);
         return { apiKey };
       }
@@ -198,7 +292,7 @@ export class KeyGenerator {
       this.credentials.adsense.email = email;
       const browser = await chromium.launch({ headless: true });
       const page = await browser.newPage();
-      await page.goto('https://www.google.com/adsense/signup', { waitUntil: 'networkidle2' });
+      await page.goto('https://www.google.com/adsense/signup', { waitUntil: 'networkidle' });
       await page.type('#email', email);
       await page.type('#password', this.credentials.adsense.password);
       if (await this.solveCaptcha(page)) {
@@ -209,7 +303,7 @@ export class KeyGenerator {
       const publisherId = await page.evaluate(() => document.querySelector('#publisher-id')?.value || null);
       await browser.close();
       if (publisherId) {
-        process.env.VITE_ADSENSE_PUBLISHER_ID = publisherId;
+        await this.storeApiKey('adsense', publisherId);
         await this.optimizeRLModel(1);
         return { publisherId };
       }
@@ -225,11 +319,6 @@ export class KeyGenerator {
 
   async transfer_usdt_with_flexgas(to_address, amount) {
     try {
-      if (!this.trustWalletApiKey) {
-        await this.handleError('transfer_usdt_with_flexgas', new Error('Trust Wallet API key not set'));
-        return { error: 'Trust Wallet API key not configured' };
-      }
-
       const response = await axios.post('/api/cosmoweb3db', {
         action: 'transfer_usdt_with_flexgas',
         to_address,
@@ -238,7 +327,6 @@ export class KeyGenerator {
         headers: { 'Content-Type': 'application/json' },
         timeout: 10000,
       });
-
       if (response.data.status === 'success') {
         console.log(`USDT transfer successful: ${response.data.tx_hash}`);
         await this.optimizeRLModel(1);
@@ -249,42 +337,50 @@ export class KeyGenerator {
         return { error: response.data.error };
       }
     } catch (error) {
-      console.error('USDT transfer with FlexGas error:', error.message);
+      console.error('USDT transfer error:', error.message);
       await this.handleError('transfer_usdt_with_flexgas', error);
       await this.optimizeRLModel(-1);
       return { error: error.message };
     }
   }
 
-  async refreshKeys(siteTypes) {
-    for (const siteType of siteTypes) {
+  async refreshKeys(services = ['infolinks', 'viglink', 'adsense', 'bscscan', 'trustwallet', 'groq']) {
+    for (const service of services) {
       let attempts = 0;
       const maxRetries = 3;
       while (attempts < maxRetries) {
         try {
           let keys = null;
-          if (siteType === 'infolinks') {
+          if (service === 'infolinks') {
             keys = await this.registerInfolinks();
-          } else if (siteType === 'viglink') {
+          } else if (service === 'viglink') {
             keys = await this.registerVigLink();
-          } else if (siteType === 'adsense') {
+          } else if (service === 'adsense') {
             keys = await this.registerAdSense();
+          } else if (service === 'bscscan') {
+            keys = await this.registerBscScan();
+          } else if (service === 'trustwallet') {
+            keys = await this.registerTrustWallet();
+          } else if (service === 'groq') {
+            keys = await this.registerGroq();
           }
           if (keys) {
-            console.log(`${siteType} keys generated:`, keys);
-            const revenue = 10; // Example amount in USDT
-            const transferResult = await this.transfer_usdt_with_flexgas('0xRecipientAddress', revenue);
-            if (transferResult.status === 'success') {
-              console.log(`Transferred ${revenue} USDT for ${siteType}: ${transferResult.tx_hash}`);
+            console.log(`${service} keys generated:`, keys);
+            if (['infolinks', 'viglink', 'adsense'].includes(service)) {
+              const revenue = 10; // Example amount in USDT
+              const transferResult = await this.transfer_usdt_with_flexgas('0xRecipientAddress', revenue);
+              if (transferResult.status === 'success') {
+                console.log(`Transferred ${revenue} USDT for ${service}: ${transferResult.tx_hash}`);
+              }
             }
             break;
           }
         } catch (error) {
           attempts++;
-          console.error(`Key generation failed for ${siteType} after attempt ${attempts}:`, error);
+          console.error(`Key generation failed for ${service} after attempt ${attempts}:`, error);
           await this.handleError('refreshKeys', error);
           if (attempts === maxRetries) {
-            console.error(`Failed to generate keys for ${siteType} after ${maxRetries} attempts`);
+            console.error(`Failed to generate keys for ${service} after ${maxRetries} attempts`);
           }
           await new Promise((resolve) => setTimeout(resolve, 1000 * attempts));
         }
