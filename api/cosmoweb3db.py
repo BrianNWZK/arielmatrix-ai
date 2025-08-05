@@ -32,31 +32,40 @@ class CosmoWeb3DB:
 
     async def initialize_ipfs_nodes(self):
         try:
-            self.ipfs_client = ipfshttpclient.connect('/dns/ipfs.io/tcp/5001/http')
+            self.ipfs_client = ipfshttpclient.connect('/dns/ipfs.io/tcp/5001/http', timeout=10)
             peer_info = self.ipfs_client.id()
             self.ipfs_nodes.append({"id": peer_info['ID'], "node": self.ipfs_client})
             self.stats["ipfs_peers"] = len(self.ipfs_nodes)
             print(f"Initialized {self.stats['ipfs_peers']} IPFS nodes")
         except Exception as e:
-            await self._log_error("initialize_ipfs_nodes", str(e))
+            await self._log_error("initialize_ipfs_nodes", f"IPFS connection failed: {str(e)}")
+            self.ipfs_client = None
+            self.stats["ipfs_peers"] = 0
 
     async def rotate_ipfs_nodes(self):
         try:
-            for node in self.ipfs_nodes:
+            for node in self.ipfs_nodes[:]:
                 try:
                     node["node"].id()
                 except:
                     self.ipfs_nodes.remove(node)
-                    new_client = ipfshttpclient.connect('/dns/ipfs.io/tcp/5001/http')
-                    new_peer_id = new_client.id()['ID']
-                    self.ipfs_nodes.append({"id": new_peer_id, "node": new_client})
+                    try:
+                        new_client = ipfshttpclient.connect('/dns/ipfs.io/tcp/5001/http', timeout=10)
+                        new_peer_id = new_client.id()['ID']
+                        self.ipfs_nodes.append({"id": new_peer_id, "node": new_client})
+                    except Exception as e:
+                        await self._log_error("rotate_ipfs_nodes", f"IPFS reconnection failed: {str(e)}")
             self.stats["ipfs_peers"] = len(self.ipfs_nodes)
-            print("Rotated IPFS nodes")
+            print(f"Rotated IPFS nodes, {self.stats['ipfs_peers']} active")
         except Exception as e:
             await self._log_error("rotate_ipfs_nodes", str(e))
 
     def _encrypt(self, data):
-        return base64.b64encode(self.box.encrypt(json.dumps(data).encode())).decode()
+        try:
+            return base64.b64encode(self.box.encrypt(json.dumps(data).encode())).decode()
+        except Exception as e:
+            self.error_log.append({"method": "_encrypt", "error": str(e), "timestamp": datetime.now().isoformat()})
+            return {}
 
     def _decrypt(self, encrypted_data):
         try:
@@ -112,6 +121,9 @@ class CosmoWeb3DB:
         return results
 
     async def _backup_to_ipfs(self):
+        if not self.ipfs_nodes:
+            await self._log_error("_backup_to_ipfs", "No active IPFS nodes")
+            return
         for node in self.ipfs_nodes:
             try:
                 data = {col: self.memory_db[col] for col in self.memory_db}
@@ -140,15 +152,16 @@ class CosmoWeb3DB:
             return input_text
 
     async def _log_error(self, method, error):
-        self.error_log.append({"method": method, "error": error, "timestamp": datetime.now().isoformat()})
+        error_entry = {"method": method, "error": error, "timestamp": datetime.now().isoformat()}
+        self.error_log.append(error_entry)
         try:
-            await self.insert("errors", {"method": method, "error": error, "timestamp": datetime.now().isoformat()})
+            await self.insert("errors", error_entry)
             await self._self_heal(method, error)
         except Exception as e:
             print(f"Failed to log error: {e}")
 
     async def _self_heal(self, method, error):
-        if "network" in error.lower():
+        if "network" in error.lower() or "connection" in error.lower():
             await asyncio.sleep(5)
         elif "captcha" in error.lower():
             self.rl_model["learning_rate"] *= 1.1
