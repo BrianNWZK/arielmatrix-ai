@@ -3,16 +3,12 @@
   "builds": [
     {
       "src": "package.json",
-      "use": "@vercel/node"
+      "use": "@vercel/static-build"
     },
     {
       "src": "api/cosmoweb3db.py",
       "use": "@vercel/python",
       "config": { "runtime": "python3.12" }
-    },
-    {
-      "src": "dist/**",
-      "use": "@vercel/static"
     }
   ],
   "routes": [
@@ -23,18 +19,17 @@
     {
       "src": "/deals.html",
       "dest": "/dist/deals.html"
-    }
-  ],
-  "rewrites": [
+    },
     {
-      "source": "/(.*)",
-      "destination": "/dist/index.html"
+      "src": "/(.*)",
+      "dest": "/dist/index.html"
     }
   ],
   "env": {
     "VITE_BSC_PRIVATE_KEY": ""
   },
   "buildCommand": "apt-get update && apt-get install -y libsodium-dev google-chrome-stable fonts-ipafont-gothic fonts-wqy-zenhei fonts-thai-tlwg fonts-kacst fonts-freefont-ttf libxss1 && pip cache purge && pip install -r requirements.txt && npm install && npm run build",
+  "outputDirectory": "dist",
   "cleanUrls": true,
   "trailingSlash": false
 }
