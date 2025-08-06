@@ -1,0 +1,23 @@
+{
+  "bots": {
+    "active": 3,
+    "last_job": "scraped 10 sites for affiliate deals",
+    "jobs_today": 27
+  },
+  "revenue": {
+    "affiliate": 12.34,
+    "ads": 5.67,
+    "total": 18.01
+  },
+  "wallets": {
+    "crypto": "0.003 ETH",
+    "paypal": "$7.10",
+    "payout_pending": "$4.90"
+  },
+  "healing": {
+    "errors_fixed": 2,
+    "last_heal": "2025-08-06T07:28:11Z",
+    "current_issue": null
+  },
+  "updated": "2025-08-06T07:28:11Z"
+}
