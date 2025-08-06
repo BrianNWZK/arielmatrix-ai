@@ -12,16 +12,14 @@ app = FastAPI()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# BSC and USDT configuration
-bsc_url = "https://bsc-dataseed.binance.org/"
+bsc_url = "[invalid url, do not cite]
 web3 = Web3(Web3.HTTPProvider(bsc_url))
 wallet_address = "0x04eC5979f05B76d334824841B8341AFdD78b2aFC"
 private_key = os.getenv("VITE_BSC_PRIVATE_KEY")
 usdt_contract_address = "0x55d398326f99059ff775485246999027b3197955"
-paymaster_url = "https://api.trustwallet.com/flexgas/v1/paymaster"
-backup_paymaster = "https://backup.trustwallet.com/flexgas/v1/paymaster"
+paymaster_url = "[invalid url, do not cite]
+backup_paymaster = "[invalid url, do not cite]
 
-# USDT ABI
 usdt_abi = [
     {"constant": False, "inputs": [{"name": "_spender", "type": "address"}, {"name": "_value", "type": "uint256"}], "name": "approve", "outputs": [], "type": "function"},
     {"constant": False, "inputs": [{"name": "_to", "type": "address"}, {"name": "_value", "type": "uint256"}], "name": "transfer", "outputs": [], "type": "function"},
@@ -136,5 +134,5 @@ async def handle_request(request: TransferRequest):
         await insert_data(request.collection, request.data)
         return {"status": "inserted"}
     elif request.action == "find":
-        return {"results": []}  # Simplified for brevity
+        return {"results": []}
     return {"error": "Invalid action"}
