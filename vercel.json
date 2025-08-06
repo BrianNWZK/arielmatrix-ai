@@ -15,7 +15,9 @@
       "src": "/(.*)",
       "dest": "/dist/index.html",
       "headers": {
-        "Cache-Control": "public, max-age=0, must-revalidate"
+        "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+        "Pragma": "no-cache",
+        "Expires": "0"
       }
     }
   ],
