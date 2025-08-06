@@ -1,16 +1,16 @@
 {
   "version": 2,
   "builds": [
-    { "src": "package.json", "use": "@vercel/node" },
+    { "src": "package.json", "use": "@vercel/static-build" },
     { "src": "api/cosmoweb3db.py", "use": "@vercel/python", "config": { "runtime": "python3.12" } },
     { "src": "api/trafficbot.py", "use": "@vercel/python", "config": { "runtime": "python3.12" } },
-    { "src": "api/orchestrator.py", "use": "@vercel/python", "config": { "runtime": "python3.12" } },
-    { "src": "dist/**", "use": "@vercel/static" }
+    { "src": "api/orchestrator.py", "use": "@vercel/python", "config": { "runtime": "python3.12" } }
   ],
   "routes": [
-    { "src": "/api/cosmoweb3db/(.*)", "dest": "/api/cosmoweb3db.py" },
-    { "src": "/api/trafficbot/(.*)", "dest": "/api/trafficbot.py" },
-    { "src": "/api/orchestrator/(.*)", "dest": "/api/orchestrator.py" },
+    { "src": "/api/cosmoweb3db/?(.*)", "dest": "/api/cosmoweb3db.py" },
+    { "src": "/api/trafficbot/?(.*)", "dest": "/api/trafficbot.py" },
+    { "src": "/api/orchestrator/?(.*)", "dest": "/api/orchestrator.py" },
+    { "src": "/deals.html", "dest": "/dist/deals.html" },
     {
       "src": "/(.*)",
       "dest": "/dist/index.html",
@@ -27,6 +27,8 @@
     "VITE_BSCSCAN_API_KEY": "",
     "VITE_GROQ_API_KEY": ""
   },
+  "buildCommand": "npm install && npm run build",
+  "outputDirectory": "dist",
   "cleanUrls": true,
   "trailingSlash": false
 }
