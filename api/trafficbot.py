@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from bs4 import BeautifulSoup
 import torch
 from torch.distributions import Categorical
+from datetime import datetime
 
 app = FastAPI()
 logging.basicConfig(level=logging.INFO)
@@ -66,54 +67,56 @@ class TrafficBot:
         dist = Categorical(logits=logits)
         action = dist.sample().item()
         if action == 0:
-            self.urls = await self.get_monetized_urls()  # Refresh URLs
+            self.urls = await self.get_monetized_urls()
             logger.info("Refreshed monetized URLs")
         elif action == 1:
-            self.accept_languages.append(random.choice(["de-DE,de;q=0.9", "ja-JP,ja;q=0.9"]))  # Add new language
+            self.accept_languages.append(random.choice(["de-DE,de;q=0.9", "ja-JP,ja;q=0.9"]))
             logger.info("Added new Accept-Language")
         elif action == 2:
-            self.referers.append("[invalid url, do not cite]  # Add new referer
+            self.referers.append("[invalid url, do not cite]
             logger.info("Added new referer")
+
+    async def run_cycle(self):
+        urls = await self.get_monetized_urls()
+        metrics = {"visits": 0, "clicks": 0, "revenue": 0, "errors": 0}
+        async with aiohttp.ClientSession() as session:
+            for url in urls:
+                try:
+                    headers = {
+                        "User-Agent": random.choice(self.user_agents),
+                        "Accept-Language": random.choice(self.accept_languages),
+                        "Referer": random.choice(self.referers)
+                    }
+                    async with session.get(url, headers=headers) as response:
+                        if response.status == 200:
+                            metrics["visits"] += 1
+                            ad_urls = await self.get_ad_urls(response)
+                            for ad_url in ad_urls:
+                                async with session.get(ad_url, headers=headers) as ad_response:
+                                    if ad_response.status == 200:
+                                        metrics["clicks"] += 1
+                                        metrics["revenue"] += 0.01
+                                        logger.info(f"Clicked ad {ad_url}")
+                            await session.post('/api/cosmoweb3db', json={
+                                'action': 'insert',
+                                'collection': 'traffic',
+                                'data': {'url': url, 'timestamp': datetime.now().isoformat(), 'country': headers['Accept-Language'].split(',')[0]}
+                            })
+                        else:
+                            metrics["errors"] += 1
+                            logger.error(f"Failed to visit {url}: {response.status}")
+                    await asyncio.sleep(random.uniform(0.1, 0.5))
+                except Exception as e:
+                    metrics["errors"] += 1
+                    logger.error(f"TrafficBot error for {url}: {str(e)}")
+        await self.optimize_traffic(metrics)
 
     async def start(self):
         self.status = "running"
-        async with aiohttp.ClientSession() as session:
-            logger.info("TrafficBot started")
-            while self.status == "running":
-                urls = await self.get_monetized_urls()
-                metrics = {"visits": 0, "clicks": 0, "revenue": 0, "errors": 0}
-                for url in urls:
-                    try:
-                        headers = {
-                            "User-Agent": random.choice(self.user_agents),
-                            "Accept-Language": random.choice(self.accept_languages),
-                            "Referer": random.choice(self.referers)
-                        }
-                        async with session.get(url, headers=headers) as response:
-                            if response.status == 200:
-                                metrics["visits"] += 1
-                                ad_urls = await self.get_ad_urls(response)
-                                for ad_url in ad_urls:
-                                    async with session.get(ad_url, headers=headers) as ad_response:
-                                        if ad_response.status == 200:
-                                            metrics["clicks"] += 1
-                                            metrics["revenue"] += 0.01  # Estimate revenue per click
-                                            logger.info(f"Clicked ad {ad_url}")
-                                await session.post('/api/cosmoweb3db', json={
-                                    'action': 'insert',
-                                    'collection': 'traffic',
-                                    'data': {'url': url, 'timestamp': datetime.now().isoformat(), 'country': headers['Accept-Language'].split(',')[0]}
-                                })
-                            else:
-                                metrics["errors"] += 1
-                                logger.error(f"Failed to visit {url}: {response.status}")
-                        await asyncio.sleep(random.uniform(0.2, 1.0))
-                    except Exception as e:
-                        metrics["errors"] += 1
-                        logger.error(f"TrafficBot error for {url}: {str(e)}")
-                await self.optimize_traffic(metrics)
-                await asyncio.sleep(5)
-            logger.info("TrafficBot stopped")
+        logger.info("TrafficBot started")
+        while self.status == "running":
+            await self.run_cycle()
+            await asyncio.sleep(30)
 
     async def stop(self):
         self.status = "stopped"
@@ -121,17 +124,17 @@ class TrafficBot:
 
 traffic_bot = TrafficBot()
 
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(traffic_bot.start())
+    logger.info("TrafficBot auto-started on application launch")
+
 class TrafficRequest(BaseModel):
     action: str
 
 @app.post("/api/trafficbot")
 async def handle_traffic(request: TrafficRequest):
-    if request.action == "start":
-        if traffic_bot.status != "running":
-            asyncio.create_task(traffic_bot.start())
-            return {"status": "TrafficBot started"}
-        return {"status": "TrafficBot already running"}
-    elif request.action == "stop":
+    if request.action == "stop":
         await traffic_bot.stop()
         return {"status": "TrafficBot stopped"}
-}
+    return {"status": "TrafficBot is running autonomously"}
