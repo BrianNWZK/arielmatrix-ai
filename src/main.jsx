@@ -19,7 +19,7 @@ import './styles.css';
     // Dynamically run autonomous repair if available
     try {
       const { default: AutonomousRepairEngine } = await import('./components/AutonomousRepairEngine');
-      if (AutonomousRepairEngine?.runAllRepairs instanceof Function) {
+      if (typeof AutonomousRepairEngine?.runAllRepairs === 'function') {
         await AutonomousRepairEngine.runAllRepairs();
         console.info('[RepairEngine] Autonomous repair sequence completed.');
       }
