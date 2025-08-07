@@ -30,7 +30,6 @@ function App() {
         setStatsError('Failed to load stats.');
       }
     };
-
     fetchStats();
   }, []);
 
@@ -53,7 +52,6 @@ function App() {
           <strong>Wallet Status: </strong>
           <span className={walletStatusClass} role="status">{walletStatus}</span>
         </div>
-
         <div>
           <strong>Total Revenue: </strong>
           <span className="text-blue-700 font-medium">${revenue.toLocaleString()}</span>
