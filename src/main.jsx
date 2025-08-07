@@ -15,7 +15,7 @@ import './styles.css';
       document.body.appendChild(rootEl);
       console.warn('[Bootstrap] Created missing #root container.');
     }
-
+    
     // Dynamically run autonomous repair if available
     try {
       const { default: AutonomousRepairEngine } = await import('./components/AutonomousRepairEngine');
@@ -26,7 +26,7 @@ import './styles.css';
     } catch (err) {
       console.warn('[RepairEngine] Skipped: No AutonomousRepairEngine loaded.', err?.message || err);
     }
-
+    
     // Render application
     ReactDOM.createRoot(rootEl).render(
       <React.StrictMode>
