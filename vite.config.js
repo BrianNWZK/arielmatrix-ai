@@ -8,7 +8,6 @@ export default defineConfig({
   plugins: [
     react({
       jsxRuntime: 'automatic',
-      fastRefresh: true,
     }),
     checker({
       typescript: false,
@@ -23,13 +22,15 @@ export default defineConfig({
       brotliSize: true,
     }),
   ],
+
   base: './',
+
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
     sourcemap: false,
     emptyOutDir: true,
-    minify: 'esbuild',
+    minify: 'terser', // ✅ REQUIRED when using terserOptions
     reportCompressedSize: true,
     rollupOptions: {
       input: './index.html',
@@ -44,13 +45,8 @@ export default defineConfig({
         },
       },
       onwarn(warning, warn) {
-        if (
-          warning.code === 'FILE_NOT_FOUND' &&
-          warning.message.includes('index.html')
-        ) {
-          throw new Error(
-            'Build failed: index.html not found. Check your input path in rollupOptions.'
-          );
+        if (warning.code === 'FILE_NOT_FOUND' && warning.message.includes('index.html')) {
+          throw new Error('Build failed: index.html not found. Check rollupOptions.input path.');
         }
         warn(warning);
       },
@@ -62,6 +58,7 @@ export default defineConfig({
       },
     },
   },
+
   server: {
     host: true,
     port: 5173,
@@ -70,30 +67,24 @@ export default defineConfig({
       overlay: true,
     },
   },
+
   preview: {
     port: 4173,
     strictPort: true,
   },
+
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
   },
-  envPrefix: 'VITE_',
-  define: {
-    'process.env': {
-      VITE_BSC_PRIVATE_KEY: JSON.stringify(process.env.VITE_BSC_PRIVATE_KEY || ''),
-      VITE_TRUST_WALLET_API_KEY: JSON.stringify(process.env.VITE_TRUST_WALLET_API_KEY || ''),
-      VITE_BSCSCAN_API_KEY: JSON.stringify(process.env.VITE_BSCSCAN_API_KEY || ''),
-      VITE_GROQ_API_KEY: JSON.stringify(process.env.VITE_GROQ_API_KEY || ''),
-      VITE_TRAFFIC_BOT_URL: JSON.stringify(process.env.VITE_TRAFFIC_BOT_URL || '/api/trafficbot'),
-      VITE_COSMO_WEB3DB_URL: JSON.stringify(process.env.VITE_COSMO_WEB3DB_URL || '/api/cosmoweb3db'),
-      VITE_ORCHESTRATOR_URL: JSON.stringify(process.env.VITE_ORCHESTRATOR_URL || '/api/orchestrator'),
-    },
-  },
+
+  envPrefix: 'VITE_', // ✅ Standard practice for frontend envs
+
   optimizeDeps: {
     include: ['react', 'react-dom', 'axios', '@tanstack/react-query'],
   },
+
   esbuild: {
     logOverride: {
       'this-is-undefined-in-esm': 'silent',
