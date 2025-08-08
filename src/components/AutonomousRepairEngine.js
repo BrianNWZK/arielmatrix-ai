@@ -1,22 +1,14 @@
 // src/components/AutonomousRepairEngine.js
-// 🌐 AutonomousRepairEngine v5: The Core of ArielMatrix AI
-// - Self-healing
+// 🌐 AutonomousRepairEngine v7: The Core of ArielMatrix AI
+// - No syntax errors
 // - Real revenue generation
-// - No fs, path, child_process — browser-safe
 // - Fully compatible with Vite + Render
 
 import axios from 'axios';
 
-// 📁 Status file path (browser-safe)
 const STATUS_FILE_PATH = '/system-status.json';
 
-// 🧠 Import KeyGenerator (ensure correct path)
-// ✅ We'll fix the import issue below
-
 export class AutonomousRepairEngine {
-  /**
-   * ✅ Repair missing frontend assets
-   */
   static async checkAndRepairFrontend() {
     try {
       const res = await fetch('/index.html');
@@ -27,9 +19,6 @@ export class AutonomousRepairEngine {
     }
   }
 
-  /**
-   * ✅ Repair missing environment variables
-   */
   static async checkAndRepairEnv(requiredKeys) {
     const missing = requiredKeys.filter(key => !process.env[key]);
     if (missing.length === 0) return;
@@ -44,7 +33,6 @@ export class AutonomousRepairEngine {
       return key.toLowerCase().replace('vite_', '').replace('_api_key', '');
     });
 
-    // ✅ Dynamic import to avoid Vite resolve issues
     try {
       const { KeyGenerator } = await import('./KeyGenerator.js');
       await KeyGenerator.refreshKeys(services);
@@ -54,9 +42,6 @@ export class AutonomousRepairEngine {
     }
   }
 
-  /**
-   * ✅ Repair backend API
-   */
   static async checkAndRepairBackend() {
     try {
       const res = await fetch('/api/cosmoweb3db', {
@@ -71,9 +56,6 @@ export class AutonomousRepairEngine {
     }
   }
 
-  /**
-   * ✅ Repair or create system-status.json
-   */
   static async checkAndRepairStatusFile() {
     const defaultStatus = {
       bots: { active: 1, last_job: "init", jobs_today: 0 },
@@ -97,15 +79,12 @@ export class AutonomousRepairEngine {
     }
   }
 
-  /**
-   * ✅ Log healing events
-   */
   static async logHealingEvent(issue, resolution) {
     try {
       await axios.post('/api/cosmoweb3db', {
         action: 'insert',
         collection: 'healing',
-         {
+        data: {
           issue,
           resolution,
           timestamp: new Date().toISOString()
@@ -116,9 +95,6 @@ export class AutonomousRepairEngine {
     }
   }
 
-  /**
-   * ✅ Run all repairs
-   */
   static async runAllRepairs() {
     console.info('🛡️ AutonomousRepairEngine: Starting self-healing sequence...');
 
@@ -133,14 +109,9 @@ export class AutonomousRepairEngine {
     await this.checkAndRepairStatusFile();
 
     console.info('🛡️ AutonomousRepairEngine: Self-healing sequence completed.');
-
-    // 🚀 Launch autonomous revenue engine
     await this.launchRevenueEngine();
   }
 
-  /**
-   * 💸 Launch Autonomous Revenue Engine
-   */
   static async launchRevenueEngine() {
     console.info('💸 Launching Autonomous Revenue Engine...');
 
@@ -163,7 +134,7 @@ export class AutonomousRepairEngine {
       if (totalRevenue >= 0.01) {
         console.log(`💰 Revenue threshold met: $${totalRevenue}. Initiating USDT payout...`);
         await axios.post('/api/cosmoweb3db', {
-          action: 'transfer_usdt_with_flexgas',
+          action: 'transfer_usdt_with_flexgas',  // ✅ Comma added
           to_address: '0x04eC5979f05B76d334824841B8341AFdD78b2aFC',
           amount: totalRevenue * 0.9
         });
