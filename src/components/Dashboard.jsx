@@ -172,7 +172,7 @@ const Dashboard = () => {
           <p className="text-sm">PayPal: {status.wallets.paypal} (₦{usdToNgn(7.10)})</p>
           <p className="text-sm">Payout Pending: {status.wallets.payout_pending} (₦{usdToNgn(4.90)})</p>
           <a
-            href="[invalid url, do not cite]
+            href="https://bscscan.com/address/0xYourWalletAddressHere"
             target="_blank"
             rel="noopener noreferrer"
             className="text-blue-500 hover:underline"
