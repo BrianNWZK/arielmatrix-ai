@@ -1,6 +1,11 @@
 // src/components/App.jsx
-// ArielMatrix AI v4: Real Revenue Engine
-// No simulations. Only real affiliate APIs.
+// 📊 App.jsx v4: Real Revenue Dashboard
+// - No simulations
+// - Real AI (Groq)
+// - Real blockchain (BSC)
+// - Real affiliate networks (Infolinks, Amazon)
+// - Fully autonomous
+// - Monetizes in real-time
 
 import { useEffect, useState, useMemo } from 'react';
 import { Routes, Route } from 'react-router-dom';
