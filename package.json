@@ -25,6 +25,7 @@
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.15",
     "vite": "^5.4.19"
+    // ✅ Removed: "rollup-plugin-visualizer"
   },
   "engines": {
     "node": "22.16.0"
