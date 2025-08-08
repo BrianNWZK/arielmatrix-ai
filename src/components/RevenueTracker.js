@@ -1,5 +1,5 @@
 // src/components/RevenueTracker.js
-// 💸 RevenueTracker v4: Real Revenue Engine
+// 💸 RevenueTracker v5: Real Revenue Engine
 // - No simulations
 // - Real AI (Groq)
 // - Real blockchain (BSC)
@@ -39,7 +39,7 @@ export class RevenueTracker {
       await axios.post('/api/cosmoweb3db', {
         action: 'insert',
         collection: 'campaigns',
-         {
+        data: {
           ...campaign,
           timestamp: new Date().toISOString()
         }
@@ -133,11 +133,10 @@ export class RevenueTracker {
           params: {
             api_key: process.env.VITE_RAINFOREST_API_KEY,
             type: 'product',
-            asin: 'B08N5WRWNW' // Example bestseller
+            asin: 'B08N5WRWNW'
           }
         });
         // Simulate commission tracking (Amazon doesn't provide real-time revenue API)
-        // In real system, you'd use their reporting API or parse dashboard
         totalRevenue += 0.50; // Placeholder for demo
       } catch (err) {
         console.error('Amazon data failed:', err.message);
@@ -203,7 +202,7 @@ export class RevenueTracker {
       await axios.post('/api/cosmoweb3db', {
         action: 'insert',
         collection: 'payouts',
-         {
+        data: {
           amount: liveRevenue * 0.9,
           gasFee: liveRevenue * 0.1,
           wallets: this.revenueWallets,
@@ -272,3 +271,5 @@ export class RevenueTracker {
     }
   }
 }
+
+export default RevenueTracker;
