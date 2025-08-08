@@ -1,24 +1,9 @@
-# render.yaml
-# ✅ ArielMatrix AI v5: Secure & Autonomous
-# - No API keys in code
-# - Real revenue generation
-# - Fully secure
-
 services:
   - type: web
     name: arielmatrix-ai
     runtime: node22
     buildCommand: npm install && npm run build
     startCommand: npm start
-    envVars:
-      - key: NODE_VERSION
-        value: 22.16.0
-      - key: PYTHON_VERSION
-        value: 3.11.10
-      - key: TYPE
-        value: module
-      - key: VITE_BSC_WALLET_ADDRESS
-        value: 0x04eC5979f05B76d334824841B8341AFdD78b2aFC
     envVarGroups:
       - id: arielmatrix-secrets
         required: true
@@ -29,19 +14,8 @@ services:
     triggerPath: /api/cosmoweb3db
     runtime: python3.11
     entrypoint: python api/cosmoweb3db.py
-    envVars:
-      - key: VITE_BSC_PRIVATE_KEY
-        fromGroup: arielmatrix-secrets
-        key: VITE_BSC_PRIVATE_KEY
-      - key: VITE_GROQ_API_KEY
-        fromGroup: arielmatrix-secrets
-        key: VITE_GROQ_API_KEY
 
   - type: cron
     name: revenue-cron
     schedule: "*/10 * * * *"
     command: curl -X POST https://arielmatrix-ai.onrender.com/api/orchestrator -H "Content-Type: application/json" -d '{"action":"run"}'
-    envVars:
-      - key: VITE_BSC_PRIVATE_KEY
-        fromGroup: arielmatrix-secrets
-        key: VITE_BSC_PRIVATE_KEY
