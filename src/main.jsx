@@ -1,15 +1,10 @@
 // src/main.jsx
-// ✅ ArielMatrix AI v8: Real Revenue Engine
-// - No invalid dynamic imports
-// - No ESLint errors
-// - Fully compatible with Vite + Render
-
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import './styles.css';
 
-// ✅ Static imports — no dynamic paths
+// ✅ Fix import paths
 import App from './components/App';
 import Dashboard from './components/Dashboard';
 
@@ -22,7 +17,6 @@ import Dashboard from './components/Dashboard';
       document.body.appendChild(rootEl);
     }
 
-    // 🔁 Run autonomous repair
     try {
       const { AutonomousRepairEngine } = await import('./components/AutonomousRepairEngine.js');
       if (AutonomousRepairEngine?.runAllRepairs) {
@@ -32,7 +26,6 @@ import Dashboard from './components/Dashboard';
       console.warn('[RepairEngine] Failed:', err?.message);
     }
 
-    // 💸 Start revenue engine
     try {
       const { RevenueEngine } = await import('./components/RevenueEngine.js');
       const setWalletStatus = (status) => {
@@ -51,7 +44,6 @@ import Dashboard from './components/Dashboard';
       console.error('[RevenueEngine] Failed:', err?.message);
     }
 
-    // ✅ Render app
     ReactDOM.createRoot(rootEl).render(
       <React.StrictMode>
         <BrowserRouter>
