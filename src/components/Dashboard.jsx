@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 
+// ✅ Clean URL — no trailing spaces
 const STATUS_URL = "https://raw.githubusercontent.com/BrianNWZK/arielmatrix-ai/main/public/system-status.json";
 
 const Dashboard = () => {
@@ -49,7 +50,7 @@ const Dashboard = () => {
         logErrorToOrchestrator(err.message);
       }
     };
-    const interval = setInterval(fetchData, 60000); // Refresh every minute
+    const interval = setInterval(fetchData, 60000);
     fetchData();
     return () => clearInterval(interval);
   }, []);
@@ -68,7 +69,7 @@ const Dashboard = () => {
     checkTrafficBot();
   }, []);
 
-  // Log errors to orchestrator for AI-driven fixes
+  // Log errors to orchestrator
   const logErrorToOrchestrator = async (error) => {
     try {
       await axios.post('/api/orchestrator', {
@@ -109,13 +110,13 @@ const Dashboard = () => {
     }
   };
 
-  // Chart data for revenue
+  // Chart data
   const chartData = payouts.map(p => ({
     time: new Date(p.timestamp).toLocaleTimeString(),
     amount: p.amount,
   }));
 
-  // Convert USD to NGN (approximate rate: 1 USD = 1600 NGN)
+  // Convert USD to NGN
   const usdToNgn = (usd) => (usd * 1600).toFixed(2);
 
   if (error) {
@@ -171,6 +172,7 @@ const Dashboard = () => {
           <p className="text-sm">Crypto: {status.wallets.crypto} (~${(0.003 * 2500).toFixed(2)})</p>
           <p className="text-sm">PayPal: {status.wallets.paypal} (₦{usdToNgn(7.10)})</p>
           <p className="text-sm">Payout Pending: {status.wallets.payout_pending} (₦{usdToNgn(4.90)})</p>
+          {/* ✅ Fixed: Clean, single-line href */}
           <a
             href="https://bscscan.com/address/0xYourWalletAddressHere"
             target="_blank"
