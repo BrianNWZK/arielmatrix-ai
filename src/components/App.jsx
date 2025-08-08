@@ -1,13 +1,5 @@
 // src/components/App.jsx
-// 💸 App.jsx v5: Real Revenue Dashboard
-// - No simulations
-// - Real AI (Groq)
-// - Real blockchain (BSC)
-// - Real affiliate networks (Infolinks, Amazon)
-// - Fully autonomous
-// - Monetizes in real-time
-
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react'; // ✅ React in scope
 import { Routes, Route } from 'react-router-dom';
 import axios from 'axios';
 
@@ -17,12 +9,10 @@ function App() {
   const [walletStatus, setWalletStatus] = useState('Initializing...');
   const [revenue, setRevenue] = useState(0);
 
-  // Real revenue only — no fake data
   const walletStatusClass = useMemo(() => {
     return revenue > 0 ? 'text-green-600' : 'text-red-600';
   }, [revenue]);
 
-  // Fetch real stats from real API
   useEffect(() => {
     const fetchStats = async () => {
       try {
@@ -46,27 +36,23 @@ function App() {
     fetchStats();
   }, []);
 
-  // Real-time wallet status from blockchain
   useEffect(() => {
     const checkWallet = async () => {
       const address = process.env.VITE_BSC_WALLET_ADDRESS || '0x04eC5979f05B76d334824841B8341AFdD78b2aFC';
       const apiKey = process.env.VITE_BSCSCAN_API_KEY;
 
-      if (!apiKey) {
-        console.warn('BscScan API key not set');
-        return;
-      }
+      if (!apiKey) return;
 
       try {
         const res = await axios.get(
           `https://api.bscscan.com/api?module=account&action=balance&address=${address}&apikey=${apiKey}`
         );
         const balanceInBNB = parseFloat(res.data.result) / 1e18;
-        const usdValue = balanceInBNB * 550; // ~$550 per BNB
+        const usdValue = balanceInBNB * 550;
 
         if (usdValue > 0.01) {
           setWalletStatus('Active');
-          setRevenue(prev => prev + usdValue * 0.1); // Simulate 10% revenue share
+          setRevenue(prev => prev + usdValue * 0.1);
         } else {
           setWalletStatus('No funds');
         }
@@ -76,7 +62,7 @@ function App() {
     };
 
     checkWallet();
-    const interval = setInterval(checkWallet, 60000); // Every minute
+    const interval = setInterval(checkWallet, 60000);
     return () => clearInterval(interval);
   }, []);
 
