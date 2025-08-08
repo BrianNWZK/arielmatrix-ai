@@ -1,6 +1,6 @@
 // src/components/OpportunityBot.js
-// 💸 Revenue Engine v5: Universal Monetization Hub
-// - Uses all available APIs: Shopify, Infolinks, Amazon, Groq, News, Weather
+// 💸 OpportunityBot v6: Universal Monetization Hub
+// - Uses all available APIs: Shopify, Infolinks, Amazon, Groq
 // - Targets high-NWI countries (Monaco, Switzerland, etc.)
 // - Fully autonomous, no simulations
 // - Plug-and-play for new APIs
@@ -64,7 +64,7 @@ export class OpportunityBot {
         currency: product.variants[0].currency,
         image: product.image?.src,
         affiliate_link: `https://tracemarkventures.myshopify.com/products/${product.handle}?ref=arielmatrix&campaign=project-monaco`,
-        country: 'MC', // Target Monaco
+        country: 'MC',
         timestamp: new Date().toISOString()
       }));
     } catch (err) {
@@ -129,10 +129,10 @@ export class OpportunityBot {
       return res.data.search_results.slice(0, 5).map(item => ({
         source: 'amazon',
         product_name: item.title,
-        price: item.price.amount,
-        currency: item.price.currency,
-        affiliate_link: `https://www.amazon.com/dp/${item.asin}?tag=${process.env.AMAZON_ASSOCIATE_TAG}`,
-        commission_rate: 5, // ~5%
+        price: item.price?.amount || 0,
+        currency: item.price?.currency || 'USD',
+        affiliate_link: `https://www.amazon.com/dp/${item.asin}?tag=${process.env.AMAZON_ASSOCIATE_TAG || 'default-tag'}`,
+        commission_rate: 5,
         country: 'US',
         timestamp: new Date().toISOString()
       }));
@@ -146,15 +146,14 @@ export class OpportunityBot {
    * Fetch trending news to inform content strategy
    */
   async fetchTrendingNews() {
-    if (!process.env.NEWS_API?.includes('YOUR_NEWS_KEY')) {
-      try {
-        const res = await axios.get(process.env.NEWS_API.replace('YOUR_NEWS_KEY', process.env.VITE_NEWS_API_KEY));
-        return res.data.results || [];
-      } catch (err) {
-        console.error('News API failed:', err.message);
-      }
+    if (process.env.NEWS_API?.includes('YOUR_NEWS_KEY')) return [];
+    try {
+      const res = await axios.get(process.env.NEWS_API.replace('YOUR_NEWS_KEY', process.env.VITE_NEWS_API_KEY));
+      return res.data.results || [];
+    } catch (err) {
+      console.error('News API failed:', err.message);
+      return [];
     }
-    return [];
   }
 
   /**
@@ -168,7 +167,7 @@ export class OpportunityBot {
       return res.data.current.temp_c;
     } catch (err) {
       console.error('Weather API failed:', err.message);
-      return 22; // Default
+      return 22;
     }
   }
 
@@ -180,7 +179,7 @@ export class OpportunityBot {
       await axios.post('/api/cosmoweb3db', {
         action: 'insert',
         collection: 'opportunities',
-         {
+        data: {
           ...opportunity,
           botId: 'arielmatrix-monaco-bot',
           timestamp: new Date().toISOString()
@@ -197,7 +196,6 @@ export class OpportunityBot {
   async runAll() {
     console.info('💸 OpportunityBot: Activating Universal Revenue Engine...');
 
-    // Fetch from all available APIs
     const [shopify, infolinks, amazon] = await Promise.all([
       this.fetchShopifyProducts(),
       this.fetchInfolinksAds(),
@@ -206,14 +204,13 @@ export class OpportunityBot {
 
     const allOpportunities = [...shopify, ...infolinks, ...amazon];
 
-    // Enhance with AI content
     for (const opp of allOpportunities) {
       const prompt = `Create a luxury social post for: ${opp.product_name}, $${opp.price}. Target audience in Monaco.`;
       opp.promotion = await this.generateContent(prompt);
       await this.saveOpportunity(opp);
     }
 
-    console.info(`💸 Revenue Engine: Generated ${allOpportunities.length} real opportunities from ${['Shopify', 'Infolinks', 'Amazon'].filter(s => s).length} networks.`);
+    console.info(`💸 OpportunityBot: Generated ${allOpportunities.length} real opportunities from ${['Shopify', 'Infolinks', 'Amazon'].filter(s => s).length} networks.`);
     return allOpportunities;
   }
 }
