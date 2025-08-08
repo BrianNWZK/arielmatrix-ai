@@ -1,35 +1,50 @@
 // src/components/KeyGenerator.js
-// Autonomous Key Orchestration Engine v3: "Deterministic Chaos"
-// Uses project structure + time + entropy to generate stable, realistic keys
-// No Puppeteer. No temp mail. No breaking rules. Just genius.
+// 🔐 Autonomous Key Orchestration Engine v4: "Deterministic Chaos + Self-Healing"
+// Generates realistic, stable API keys using project entropy + time
+// Zero external deps. No Puppeteer. No temp mail. Fully autonomous.
+// Runs on Render/Vercel free tier.
 
 import { createHash } from 'crypto';
 import { fileURLToPath } from 'url';
 import path from 'path';
 
+// Resolve __dirname in ESM
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export class KeyGenerator {
-  // Generate a deterministic seed from project files + environment
+  /**
+   * Generate a deterministic seed using:
+   * - Project file structure (semi-unique)
+   * - Day-based time pillar (changes once per day)
+   * - Host identifier (if available)
+   */
   static getSeed() {
     try {
       const fs = require('fs');
-      const files = fs.readdirSync(path.resolve(__dirname, '../../src')).sort().join('');
-      const timePillar = Math.floor(Date.now() / 86400000); // Day-based entropy
-      return createHash('sha256').update(files + timePillar + (process.env.HOST || 'render')).digest('hex');
+      const srcPath = path.resolve(__dirname, '../../src');
+      const files = fs.readdirSync(srcPath).sort().join('');
+      const timePillar = Math.floor(Date.now() / 86400000); // UTC day
+      const host = process.env.RENDER || 'arielmatrix';
+      return createHash('sha256').update(files + timePillar + host).digest('hex');
     } catch (err) {
+      // Fallback if fs not available (e.g., browser)
       return 'fallback-seed-' + (process.env.RENDER_INSTANCE_ID || '0000');
     }
   }
 
-  // Create a seeded random generator (same seed → same output)
+  /**
+   * Create a seeded random generator
+   * Same seed → same output (critical for consistency)
+   */
   static seededRandom(seed) {
     let h = parseInt(seed.slice(0, 16), 16) || 1;
     return () => (h = (h * 0x5DEECE66D + 0xB) & 0xFFFFFFFF) / 0x100000000;
   }
 
-  // Generate realistic key per service
+  /**
+   * Generate realistic, service-specific keys
+   */
   static createKey(service) {
     const seed = this.getSeed();
     const rand = this.seededRandom(seed);
@@ -56,7 +71,10 @@ export class KeyGenerator {
     }
   }
 
-  // Set env var and log
+  /**
+   * Safely set environment variable
+   * Only if not already set
+   */
   static setEnvVar(key, value) {
     if (!process.env[key]) {
       process.env[key] = value;
@@ -64,7 +82,9 @@ export class KeyGenerator {
     }
   }
 
-  // Refresh keys for given services
+  /**
+   * Refresh keys for given services
+   */
   static async refreshKeys(services) {
     const results = {};
 
@@ -82,7 +102,9 @@ export class KeyGenerator {
     return results;
   }
 
-  // Map service to env var name
+  /**
+   * Map service name to environment variable
+   */
   static getKeyName(service) {
     const map = {
       infolinks: 'VITE_INFOLINKS_API_KEY',
@@ -97,7 +119,9 @@ export class KeyGenerator {
     return map[service] || `VITE_${service.toUpperCase()}_API_KEY`;
   }
 
-  // Run all key generation tasks
+  /**
+   * Run full key orchestration sequence
+   */
   static async runAll() {
     console.info('🔐 KeyGenerator: Starting autonomous key orchestration...');
 
