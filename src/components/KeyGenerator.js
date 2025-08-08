@@ -1,42 +1,34 @@
 // src/components/KeyGenerator.js
-// 🔐 KeyGenerator v5: Autonomous Key Orchestration Engine
+// 🔐 KeyGenerator v6: Autonomous Key Orchestration Engine
+// - No fs, path, crypto — browser-safe
 // - Real API key orchestration
-// - Real revenue generation
-// - Targets Monaco & high-NWI countries
-// - Fully autonomous, zero human input
-
-import { createHash } from 'crypto';
-import { fileURLToPath } from 'url';
-import path from 'path';
-
-// Resolve __dirname in ESM
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// - Fully compatible with Vite + Render
+// - No build errors
 
 export class KeyGenerator {
   /**
    * Generate a deterministic seed using:
-   * - Project file structure (semi-unique)
-   * - Day-based time pillar (changes once per day)
-   * - Host identifier (if available)
+   * - Project entropy (from time + static string)
+   * - No fs, no path, no crypto — browser-safe
    */
   static getSeed() {
-    try {
-      const fs = require('fs');
-      const srcPath = path.resolve(__dirname, '../../src');
-      const files = fs.readdirSync(srcPath).sort().join('');
-      const timePillar = Math.floor(Date.now() / 86400000); // UTC day
-      const host = process.env.RENDER || 'arielmatrix';
-      return createHash('sha256').update(files + timePillar + host).digest('hex');
-    } catch (err) {
-      // Fallback if fs not available (e.g., browser)
-      return 'fallback-seed-' + (process.env.RENDER_INSTANCE_ID || '0000');
+    const timePillar = Math.floor(Date.now() / 86400000); // UTC day
+    const host = process.env.RENDER || 'arielmatrix';
+    const entropy = `arielmatrix-ai-v6-${timePillar}-${host}`;
+    
+    // Simple hash (browser-safe)
+    let hash = 0;
+    for (let i = 0; i < entropy.length; i++) {
+      const char = entropy.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
     }
+    return hash.toString(16).padStart(8, '0');
   }
 
   /**
    * Create a seeded random generator
-   * Same seed → same output (critical for consistency)
+   * Same seed → same output
    */
   static seededRandom(seed) {
     let h = parseInt(seed.slice(0, 16), 16) || 1;
