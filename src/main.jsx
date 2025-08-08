@@ -1,3 +1,4 @@
+// src/main.jsx
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
@@ -5,9 +6,12 @@ import App from './components/App';
 import Dashboard from './components/Dashboard';
 import './styles.css';
 
+// Ensure consistent module type
+// Add `"type": "module"` to package.json to prevent CJS warnings
+
 (async () => {
   try {
-    // Ensure #root exists (critical for Vercel/SSR)
+    // ✅ Ensure #root exists (critical for SSR/Vercel/Render)
     let rootEl = document.getElementById('root');
     if (!rootEl) {
       rootEl = document.createElement('div');
@@ -15,8 +19,8 @@ import './styles.css';
       document.body.appendChild(rootEl);
       console.warn('[Bootstrap] Created missing #root container.');
     }
-    
-    // Dynamically run autonomous repair if available
+
+    // 🔁 Dynamically run autonomous repair if available
     try {
       const { default: AutonomousRepairEngine } = await import('./components/AutonomousRepairEngine');
       if (typeof AutonomousRepairEngine?.runAllRepairs === 'function') {
@@ -26,8 +30,8 @@ import './styles.css';
     } catch (err) {
       console.warn('[RepairEngine] Skipped: No AutonomousRepairEngine loaded.', err?.message || err);
     }
-    
-    // Render application
+
+    // ✅ Render the app
     ReactDOM.createRoot(rootEl).render(
       <React.StrictMode>
         <BrowserRouter>
