@@ -1,5 +1,5 @@
 // src/components/App.jsx
-// 📊 App.jsx v4: Real Revenue Dashboard
+// 💸 App.jsx v5: Real Revenue Dashboard
 // - No simulations
 // - Real AI (Groq)
 // - Real blockchain (BSC)
@@ -7,7 +7,7 @@
 // - Fully autonomous
 // - Monetizes in real-time
 
-import { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import axios from 'axios';
 
@@ -49,8 +49,18 @@ function App() {
   // Real-time wallet status from blockchain
   useEffect(() => {
     const checkWallet = async () => {
+      const address = process.env.VITE_BSC_WALLET_ADDRESS || '0x04eC5979f05B76d334824841B8341AFdD78b2aFC';
+      const apiKey = process.env.VITE_BSCSCAN_API_KEY;
+
+      if (!apiKey) {
+        console.warn('BscScan API key not set');
+        return;
+      }
+
       try {
-        const res = await axios.get(`https://api.bscscan.com/api?module=account&action=balance&address=${process.env.VITE_BSC_WALLET_ADDRESS}&apikey=${process.env.VITE_BSCSCAN_API_KEY}`);
+        const res = await axios.get(
+          `https://api.bscscan.com/api?module=account&action=balance&address=${address}&apikey=${apiKey}`
+        );
         const balanceInBNB = parseFloat(res.data.result) / 1e18;
         const usdValue = balanceInBNB * 550; // ~$550 per BNB
 
