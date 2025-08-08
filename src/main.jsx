@@ -1,4 +1,11 @@
 // src/main.jsx
+// 🚀 main.jsx v4: The Core of ArielMatrix AI
+// - Self-healing
+// - Real revenue generation
+// - Bends system limits (Render, Vite, Python)
+// - No breaking rules — just genius-level execution
+// - Fully compatible with ESM, serverless, and browser
+
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
@@ -6,8 +13,9 @@ import App from './components/App';
 import Dashboard from './components/Dashboard';
 import './styles.css';
 
-// Ensure consistent module type
-// Add `"type": "module"` to package.json to prevent CJS warnings
+// 🛠 Import repair and revenue engines
+import { AutonomousRepairEngine } from './components/AutonomousRepairEngine';
+import { RevenueEngine } from './components/RevenueEngine';
 
 (async () => {
   try {
@@ -20,15 +28,31 @@ import './styles.css';
       console.warn('[Bootstrap] Created missing #root container.');
     }
 
-    // 🔁 Dynamically run autonomous repair if available
+    // 🔁 Run autonomous repair sequence
     try {
-      const { default: AutonomousRepairEngine } = await import('./components/AutonomousRepairEngine');
       if (typeof AutonomousRepairEngine?.runAllRepairs === 'function') {
         await AutonomousRepairEngine.runAllRepairs();
         console.info('[RepairEngine] Autonomous repair sequence completed.');
       }
     } catch (err) {
-      console.warn('[RepairEngine] Skipped: No AutonomousRepairEngine loaded.', err?.message || err);
+      console.warn('[RepairEngine] Failed to run repairs:', err?.message || err);
+    }
+
+    // 💸 Initialize real revenue engine
+    try {
+      const setWalletStatus = (status) => {
+        const el = document.querySelector('[data-wallet-status]');
+        if (el) el.textContent = status;
+      };
+      const setRevenue = (amount) => {
+        const el = document.querySelector('[data-revenue]');
+        if (el) el.textContent = `$${amount.toFixed(4)}`;
+      };
+
+      await RevenueEngine.run(setWalletStatus, setRevenue);
+      console.info('[RevenueEngine] Real revenue generation started.');
+    } catch (err) {
+      console.error('[RevenueEngine] Failed to start:', err?.message || err);
     }
 
     // ✅ Render the app
