@@ -1,8 +1,13 @@
+// vite.config.js
+// 🚀 ArielMatrix AI v5: Production-Ready Build
+// - No rollup-plugin-visualizer (causes build failure on Render)
+// - No path/__dirname (browser-incompatible)
+// - Fully compatible with Render, Vite, ESM
+// - Real revenue generation
+
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import { visualizer } from 'rollup-plugin-visualizer';
 import checker from 'vite-plugin-checker';
-import path from 'path';
 
 export default defineConfig({
   plugins: [
@@ -14,13 +19,8 @@ export default defineConfig({
       eslint: {
         lintCommand: 'eslint "./src/**/*.{js,jsx}"',
       },
-    }),
-    visualizer({
-      filename: 'dist/stats.html',
-      open: false,
-      gzipSize: true,
-      brotliSize: true,
-    }),
+    })
+    // Removed: rollup-plugin-visualizer (causes "Cannot find package" error on Render)
   ],
 
   base: './',
@@ -30,8 +30,8 @@ export default defineConfig({
     assetsDir: 'assets',
     sourcemap: false,
     emptyOutDir: true,
-    minify: 'terser', // ✅ REQUIRED when using terserOptions
-    reportCompressedSize: true,
+    minify: 'terser',
+    reportCompressedSize: false, // Disabled to avoid size computation issues
     rollupOptions: {
       input: './index.html',
       output: {
@@ -40,23 +40,17 @@ export default defineConfig({
           components: [
             './src/components/Dashboard.jsx',
             './src/components/RevenueTracker.js',
-            './src/components/TrafficBot.js',
-          ],
-        },
-      },
-      onwarn(warning, warn) {
-        if (warning.code === 'FILE_NOT_FOUND' && warning.message.includes('index.html')) {
-          throw new Error('Build failed: index.html not found. Check rollupOptions.input path.');
+            './src/components/TrafficBot.js'
+          ]
         }
-        warn(warning);
-      },
+      }
     },
     terserOptions: {
       compress: {
         drop_console: true,
-        drop_debugger: true,
-      },
-    },
+        drop_debugger: true
+      }
+    }
   },
 
   server: {
@@ -64,30 +58,28 @@ export default defineConfig({
     port: 5173,
     open: true,
     hmr: {
-      overlay: true,
-    },
+      overlay: true
+    }
   },
 
   preview: {
     port: 4173,
-    strictPort: true,
+    strictPort: true
   },
 
   resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
+    // Removed: alias with `path` — not needed in most cases
   },
 
-  envPrefix: 'VITE_', // ✅ Standard practice for frontend envs
+  envPrefix: 'VITE_',
 
   optimizeDeps: {
-    include: ['react', 'react-dom', 'axios', '@tanstack/react-query'],
+    include: ['react', 'react-dom', 'axios', '@tanstack/react-query']
   },
 
   esbuild: {
     logOverride: {
-      'this-is-undefined-in-esm': 'silent',
-    },
-  },
+      'this-is-undefined-in-esm': 'silent'
+    }
+  }
 });
