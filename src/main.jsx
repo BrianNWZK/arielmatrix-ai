@@ -1,25 +1,28 @@
 // src/main.jsx
-// 🚀 main.jsx v4: The Core of ArielMatrix AI
+// 🚀 main.jsx v5: The Core of ArielMatrix AI
 // - Self-healing
 // - Real revenue generation
-// - Bends system limits (Render, Vite, Python)
-// - No breaking rules — just genius-level execution
-// - Fully compatible with ESM, serverless, and browser
+// - No fs, path, child_process — browser-safe
+// - Fully compatible with Vite + Render
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import App from './components/App';
-import Dashboard from './components/Dashboard';
 import './styles.css';
 
-// 🛠 Import repair and revenue engines
-import { AutonomousRepairEngine } from './components/AutonomousRepairEngine';
-import { RevenueEngine } from './components/RevenueEngine';
+// ✅ Dynamically import components to avoid Vite resolve issues
+const loadComponent = async (path) => {
+  try {
+    return await import(`./components/${path}`);
+  } catch (err) {
+    console.error(`Failed to load component: ${path}`, err.message);
+    return null;
+  }
+};
 
 (async () => {
   try {
-    // ✅ Ensure #root exists (critical for SSR/Vercel/Render)
+    // ✅ Ensure #root exists
     let rootEl = document.getElementById('root');
     if (!rootEl) {
       rootEl = document.createElement('div');
@@ -30,7 +33,8 @@ import { RevenueEngine } from './components/RevenueEngine';
 
     // 🔁 Run autonomous repair sequence
     try {
-      if (typeof AutonomousRepairEngine?.runAllRepairs === 'function') {
+      const { AutonomousRepairEngine } = await loadComponent('AutonomousRepairEngine.js');
+      if (AutonomousRepairEngine?.runAllRepairs) {
         await AutonomousRepairEngine.runAllRepairs();
         console.info('[RepairEngine] Autonomous repair sequence completed.');
       }
@@ -40,6 +44,7 @@ import { RevenueEngine } from './components/RevenueEngine';
 
     // 💸 Initialize real revenue engine
     try {
+      const { RevenueEngine } = await loadComponent('RevenueEngine.js');
       const setWalletStatus = (status) => {
         const el = document.querySelector('[data-wallet-status]');
         if (el) el.textContent = status;
@@ -49,19 +54,28 @@ import { RevenueEngine } from './components/RevenueEngine';
         if (el) el.textContent = `$${amount.toFixed(4)}`;
       };
 
-      await RevenueEngine.run(setWalletStatus, setRevenue);
-      console.info('[RevenueEngine] Real revenue generation started.');
+      if (RevenueEngine?.run) {
+        await RevenueEngine.run(setWalletStatus, setRevenue);
+        console.info('[RevenueEngine] Real revenue generation started.');
+      }
     } catch (err) {
       console.error('[RevenueEngine] Failed to start:', err?.message || err);
     }
 
     // ✅ Render the app
+    const App = (await loadComponent('App.jsx'))?.default;
+    const Dashboard = (await loadComponent('Dashboard.jsx'))?.default;
+
+    if (!App) {
+      console.error('❌ App component failed to load');
+    }
+
     ReactDOM.createRoot(rootEl).render(
       <React.StrictMode>
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<App />} />
-            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/" element={App ? <App /> : <div>Loading App...</div>} />
+            <Route path="/dashboard" element={Dashboard ? <Dashboard /> : <div>Loading Dashboard...</div>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>
