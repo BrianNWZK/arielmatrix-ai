@@ -84,7 +84,7 @@ export class AutonomousRepairEngine {
       await axios.post('/api/cosmoweb3db', {
         action: 'insert',
         collection: 'healing',
-         {
+        document: {
           issue,
           resolution,
           timestamp: new Date().toISOString()
