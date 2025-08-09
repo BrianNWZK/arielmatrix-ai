@@ -1,5 +1,5 @@
 // src/components/App.jsx
-import React, { useEffect, useState, useMemo } from 'react'; // ✅ React in scope
+import React, { useEffect, useState, useMemo } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import axios from 'axios';
 
