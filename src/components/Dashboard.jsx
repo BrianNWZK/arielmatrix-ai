@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 
+// ✅ Clean URL — no trailing spaces
 const STATUS_URL = "https://raw.githubusercontent.com/BrianNWZK/arielmatrix-ai/main/public/system-status.json";
 
 const Dashboard = () => {
