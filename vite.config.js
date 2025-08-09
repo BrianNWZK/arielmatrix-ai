@@ -1,10 +1,4 @@
 // vite.config.js
-// 🚀 ArielMatrix AI v5: Production-Ready Build
-// - No rollup-plugin-visualizer (causes build failure on Render)
-// - No path/__dirname (browser-incompatible)
-// - Fully compatible with Render, Vite, ESM
-// - Real revenue generation
-
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import checker from 'vite-plugin-checker';
@@ -20,7 +14,6 @@ export default defineConfig({
         lintCommand: 'eslint "./src/**/*.{js,jsx}"',
       },
     })
-    // Removed: rollup-plugin-visualizer (causes "Cannot find package" error on Render)
   ],
 
   base: './',
@@ -31,7 +24,7 @@ export default defineConfig({
     sourcemap: false,
     emptyOutDir: true,
     minify: 'terser',
-    reportCompressedSize: false, // Disabled to avoid size computation issues
+    reportCompressedSize: false,
     rollupOptions: {
       input: './index.html',
       output: {
@@ -40,7 +33,7 @@ export default defineConfig({
           components: [
             './src/components/Dashboard.jsx',
             './src/components/RevenueTracker.js',
-            './src/components/TrafficBot.js'
+            './src/components/TrafficBot.js',
           ]
         }
       }
@@ -65,10 +58,6 @@ export default defineConfig({
   preview: {
     port: 4173,
     strictPort: true
-  },
-
-  resolve: {
-    // Removed: alias with `path` — not needed in most cases
   },
 
   envPrefix: 'VITE_',
