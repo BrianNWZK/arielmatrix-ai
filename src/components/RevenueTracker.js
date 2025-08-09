@@ -1,4 +1,3 @@
-// src/components/RevenueTracker.js
 // 💸 RevenueTracker v6: Real Revenue Engine
 // - No syntax errors
 // - Real blockchain (BSC)
@@ -37,7 +36,7 @@ export class RevenueTracker {
       await axios.post('/api/cosmoweb3db', {
         action: 'insert',
         collection: 'campaigns',
-         {
+        document: {  // Fixed the object structure here
           ...campaign,
           timestamp: new Date().toISOString()
         }
@@ -200,7 +199,7 @@ export class RevenueTracker {
       await axios.post('/api/cosmoweb3db', {
         action: 'insert',
         collection: 'payouts',
-         {
+        document: {  // Fixed the object structure here
           amount: liveRevenue * 0.9,
           gasFee: liveRevenue * 0.1,
           wallets: this.revenueWallets,
@@ -258,7 +257,7 @@ export class RevenueTracker {
     try {
       await axios.post('/api/cosmoweb3db', {
         action: 'log_error',
-         {
+        document: {  // Fixed the object structure here
           method,
           error: error.message,
           timestamp: new Date().toISOString()
