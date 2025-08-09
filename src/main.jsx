@@ -1,5 +1,5 @@
 // src/main.jsx
-// 🚀 ArielMatrix AI v11: Real Revenue Engine
+// 🚀 ArielMatrix AI v10: Real Revenue Engine
 // - No path errors
 // - Real revenue generation
 // - Fully compatible with Vite + Render
@@ -7,11 +7,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-
-// ✅ CORRECT: Import from src/assets/index.css
 import './assets/index.css';
-
-// ✅ CORRECT: Import components with .jsx extension
 import App from './components/App.jsx';
 import Dashboard from './components/Dashboard.jsx';
 
