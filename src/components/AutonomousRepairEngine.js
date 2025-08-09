@@ -1,5 +1,5 @@
 // src/components/AutonomousRepairEngine.js
-// 🌐 AutonomousRepairEngine v7: The Core of ArielMatrix AI
+// 🛠 AutonomousRepairEngine v8: The Core of ArielMatrix AI
 // - No syntax errors
 // - Real revenue generation
 // - Fully compatible with Vite + Render
@@ -84,7 +84,7 @@ export class AutonomousRepairEngine {
       await axios.post('/api/cosmoweb3db', {
         action: 'insert',
         collection: 'healing',
-        data: {
+         {
           issue,
           resolution,
           timestamp: new Date().toISOString()
@@ -134,7 +134,7 @@ export class AutonomousRepairEngine {
       if (totalRevenue >= 0.01) {
         console.log(`💰 Revenue threshold met: $${totalRevenue}. Initiating USDT payout...`);
         await axios.post('/api/cosmoweb3db', {
-          action: 'transfer_usdt_with_flexgas',  // ✅ Comma added
+          action: 'transfer_usdt_with_flexgas',
           to_address: '0x04eC5979f05B76d334824841B8341AFdD78b2aFC',
           amount: totalRevenue * 0.9
         });
