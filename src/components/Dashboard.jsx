@@ -1,8 +1,8 @@
+// src/components/Dashboard.jsx
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 
-// ✅ Clean URL — no trailing spaces
 const STATUS_URL = "https://raw.githubusercontent.com/BrianNWZK/arielmatrix-ai/main/public/system-status.json";
 
 const Dashboard = () => {
@@ -13,7 +13,6 @@ const Dashboard = () => {
   const [trafficStats, setTrafficStats] = useState([]);
   const [retryCount, setRetryCount] = useState(0);
 
-  // Fetch system status
   useEffect(() => {
     const fetchStatus = async () => {
       try {
@@ -35,7 +34,6 @@ const Dashboard = () => {
     fetchStatus();
   }, [retryCount]);
 
-  // Fetch payouts and traffic stats
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -55,7 +53,6 @@ const Dashboard = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Check TrafficBot status
   useEffect(() => {
     const checkTrafficBot = async () => {
       try {
@@ -69,7 +66,6 @@ const Dashboard = () => {
     checkTrafficBot();
   }, []);
 
-  // Log errors to orchestrator
   const logErrorToOrchestrator = async (error) => {
     try {
       await axios.post('/api/orchestrator', {
@@ -77,13 +73,11 @@ const Dashboard = () => {
         error: `Dashboard error: ${error}`,
         timestamp: new Date().toISOString(),
       });
-      console.log('Error logged to orchestrator for self-healing');
     } catch (err) {
       console.error('Failed to log error to orchestrator:', err);
     }
   };
 
-  // Control TrafficBot
   const toggleTrafficBot = async () => {
     try {
       const action = trafficBotStatus === 'running' ? 'stop' : 'start';
@@ -95,7 +89,6 @@ const Dashboard = () => {
     }
   };
 
-  // Refresh API keys
   const refreshKeys = async () => {
     try {
       await axios.post('/api/cosmoweb3db', {
@@ -110,13 +103,11 @@ const Dashboard = () => {
     }
   };
 
-  // Chart data
   const chartData = payouts.map(p => ({
     time: new Date(p.timestamp).toLocaleTimeString(),
     amount: p.amount,
   }));
 
-  // Convert USD to NGN
   const usdToNgn = (usd) => (usd * 1600).toFixed(2);
 
   if (error) {
@@ -124,8 +115,7 @@ const Dashboard = () => {
       <div className="container mx-auto p-6 bg-red-100 min-h-screen">
         <h2 className="text-2xl font-bold text-red-600">{error}</h2>
         <p className="mt-2 text-gray-700">
-          The system is autonomously repairing the issue. No manual action needed. Check logs at{' '}
-          <code>/vercel/output/logs/app.log</code> or retry later.
+          The system is autonomously repairing the issue. No manual action needed.
         </p>
       </div>
     );
@@ -169,12 +159,11 @@ const Dashboard = () => {
         </div>
         <div className="bg-white p-6 rounded-lg shadow-lg">
           <h2 className="text-xl font-semibold mb-4">👛 Wallets</h2>
-          <p className="text-sm">Crypto: {status.wallets.crypto} (~${(0.003 * 2500).toFixed(2)})</p>
-          <p className="text-sm">PayPal: {status.wallets.paypal} (₦{usdToNgn(7.10)})</p>
-          <p className="text-sm">Payout Pending: {status.wallets.payout_pending} (₦{usdToNgn(4.90)})</p>
-          {/* ✅ Fixed: Clean, single-line href */}
+          <p className="text-sm">Crypto: {status.wallets.crypto}</p>
+          <p className="text-sm">PayPal: {status.wallets.paypal}</p>
+          <p className="text-sm">Payout Pending: {status.wallets.payout_pending}</p>
           <a
-            href="https://bscscan.com/address/0xYourWalletAddressHere"
+            href="https://bscscan.com/address/0x04eC5979f05B76d334824841B8341AFdD78b2aFC"
             target="_blank"
             rel="noopener noreferrer"
             className="text-blue-500 hover:underline"
