@@ -1,5 +1,5 @@
 // src/components/AutonomousRepairEngine.js
-// 🛠 AutonomousRepairEngine v10: The Core of ArielMatrix AI
+// 🛠 AutonomousRepairEngine v12: The Core of ArielMatrix AI
 // - No syntax errors
 // - Real revenue generation
 // - Fully compatible with Vite + Render
@@ -84,7 +84,7 @@ export class AutonomousRepairEngine {
       await axios.post('/api/cosmoweb3db', {
         action: 'insert',
         collection: 'healing',
-        document: {
+        data: {
           issue,
           resolution,
           timestamp: new Date().toISOString()
